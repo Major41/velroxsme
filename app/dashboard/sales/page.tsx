@@ -206,11 +206,6 @@ const updateOrCreateCustomer = async (saleData: any) => {
         })
         .select();
 
-      if (insertError) {
-        console.error('Error creating customer:', insertError);
-      } else {
-        console.log('New customer created:', newCustomer);
-      }
     }
   } catch (err) {
     console.error('Error in updateOrCreateCustomer:', err);

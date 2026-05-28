@@ -167,7 +167,7 @@ const { error } = await supabase
 ```typescript
 const { data: { user } } = await supabase.auth.getUser();
 if (user) {
-  console.log('User is logged in:', user.email);
+  // console.log('User is logged in:', user.email);
 }
 ```
 

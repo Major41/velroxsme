@@ -121,7 +121,6 @@ export default function SettingsPage() {
       }
 
       const data = await response.json();
-      console.log("Upload successful, URL:", data.secure_url);
       return data.secure_url;
     } catch (err: any) {
       console.error("Upload error:", err);
@@ -181,7 +180,6 @@ export default function SettingsPage() {
         setUploading(true);
         try {
           logoUrl = await uploadImageToCloudinary(logoFile);
-          console.log("Logo uploaded successfully:", logoUrl);
 
           // Update settings state with new logo URL
           setSettings((prev) => ({ ...prev, business_logo: logoUrl }));
@@ -208,7 +206,6 @@ export default function SettingsPage() {
         updated_at: new Date().toISOString(),
       };
 
-      console.log("Updating business with data:", updateData);
 
       // Only update password if provided
       if (settings.admin_password) {
@@ -239,14 +236,12 @@ export default function SettingsPage() {
         throw updateError;
       }
 
-      console.log("Update successful, returned data:", updatedData);
 
       // Get the updated data - it should be the first item in the array
       const updatedBusinessData =
         updatedData && updatedData[0] ? updatedData[0] : null;
 
       if (updatedBusinessData) {
-        console.log("Updated business data from DB:", updatedBusinessData);
 
         // Update context with new data
         const updatedBusiness = {
@@ -268,7 +263,6 @@ export default function SettingsPage() {
         }));
       } else {
         // If no data returned, manually update the context with what we sent
-        console.log("No data returned, updating context manually");
         const updatedBusiness = {
           ...business,
           business_name: settings.business_name,

@@ -5,7 +5,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { ChartCard } from '@/components/dashboard/ChartCard';
 import { DataTable } from '@/components/dashboard/DataTable';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { TrendingUp, Users, CreditCard, Percent, Package, DollarSign } from 'lucide-react';
+import { TrendingUp, Users, CreditCard, Percent, Package, DollarSign, Briefcase, Truck, Receipt } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useBusiness } from '@/context/BusinessContext';
 
@@ -26,11 +26,32 @@ interface Expense {
   status: string;
 }
 
+interface Purchase {
+  id: string;
+  date: string;
+  total_amount: number;
+  status: string;
+}
+
+interface Payroll {
+  id: string;
+  payment_date: string;
+  amount: number;
+  status: string;
+}
+
 interface Customer {
   id: string;
   name: string;
   total_spent: number;
   visit_count: number;
+  status: string;
+}
+
+interface ServiceFee {
+  id: string;
+  created_at: string;
+  amount: number;
   status: string;
 }
 
@@ -41,6 +62,9 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [sales, setSales] = useState<Sale[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [payrolls, setPayrolls] = useState<Payroll[]>([]);
+  const [serviceFees, setServiceFees] = useState<ServiceFee[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
   const [recentSales, setRecentSales] = useState<Sale[]>([]);
@@ -74,10 +98,43 @@ export default function DashboardPage() {
       const { data: expensesData, error: expensesError } = await supabase
         .from('expenses')
         .select('*')
-        .eq('business_id', business.id);
+        .eq('business_id', business.id)
+        .eq('status', 'paid');
 
       if (expensesError) throw expensesError;
       setExpenses(expensesData || []);
+
+      // Fetch purchases
+      const { data: purchasesData, error: purchasesError } = await supabase
+        .from('purchases')
+        .select('*')
+        .eq('business_id', business.id)
+        .eq('status', 'received');
+
+      if (purchasesError) throw purchasesError;
+      setPurchases(purchasesData || []);
+
+      // Fetch payroll
+      const { data: payrollData, error: payrollError } = await supabase
+        .from('payroll')
+        .select('*')
+        .eq('business_id', business.id)
+        .eq('status', 'paid');
+
+      if (payrollError) throw payrollError;
+      setPayrolls(payrollData || []);
+
+      // Fetch service fees (assuming you have a service_fees table)
+      const { data: serviceFeesData, error: serviceFeesError } = await supabase
+        .from('service_fees')
+        .select('*')
+        .eq('business_id', business.id)
+        .eq('status', 'completed');
+
+      if (serviceFeesError && !serviceFeesError.message.includes('relation')) {
+        console.error('Error fetching service fees:', serviceFeesError);
+      }
+      setServiceFees(serviceFeesData || []);
 
       // Fetch customers
       const { data: customersData, error: customersError } = await supabase
@@ -94,13 +151,21 @@ export default function DashboardPage() {
       
       // Initialize chart data
       last30Days.forEach(date => {
-        chartDataMap.set(date, { date, sales: 0, expenses: 0 });
+        chartDataMap.set(date, { 
+          date, 
+          sales: 0, 
+          expenses: 0, 
+          purchases: 0, 
+          payroll: 0,
+          serviceFees: 0,
+          profit: 0 
+        });
       });
       
       // Add sales to chart
       (salesData || []).forEach(sale => {
         const date = sale.date;
-        if (chartDataMap.has(date)) {
+        if (chartDataMap.has(date) && sale.payment_status === 'paid') {
           const existing = chartDataMap.get(date);
           existing.sales += sale.amount;
           chartDataMap.set(date, existing);
@@ -117,7 +182,44 @@ export default function DashboardPage() {
         }
       });
       
-      setChartData(Array.from(chartDataMap.values()).slice(-30));
+      // Add purchases to chart
+      (purchasesData || []).forEach(purchase => {
+        const date = purchase.date;
+        if (chartDataMap.has(date)) {
+          const existing = chartDataMap.get(date);
+          existing.purchases += purchase.total_amount;
+          chartDataMap.set(date, existing);
+        }
+      });
+      
+      // Add payroll to chart
+      (payrollData || []).forEach(payroll => {
+        const date = payroll.payment_date;
+        if (chartDataMap.has(date)) {
+          const existing = chartDataMap.get(date);
+          existing.payroll += payroll.amount;
+          chartDataMap.set(date, existing);
+        }
+      });
+      
+      // Add service fees to chart
+      (serviceFeesData || []).forEach(fee => {
+        const date = fee.created_at?.split('T')[0];
+        if (chartDataMap.has(date)) {
+          const existing = chartDataMap.get(date);
+          existing.serviceFees += fee.amount;
+          chartDataMap.set(date, existing);
+        }
+      });
+      
+      // Calculate profit for each day
+      const chartArray = Array.from(chartDataMap.values());
+      chartArray.forEach(day => {
+        const totalCosts = day.expenses + day.purchases + day.payroll + day.serviceFees;
+        day.profit = day.sales - totalCosts;
+      });
+      
+      setChartData(chartArray.slice(-30));
 
     } catch (err: any) {
       console.error('Error fetching dashboard data:', err);
@@ -142,26 +244,63 @@ export default function DashboardPage() {
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
     
-    // Current month sales
+    // Current month sales (paid only)
     const currentMonthSales = sales.filter(sale => {
       const saleDate = new Date(sale.date);
-      return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear && sale.payment_status === 'paid';
+      return saleDate.getMonth() === currentMonth && 
+             saleDate.getFullYear() === currentYear && 
+             sale.payment_status === 'paid';
     }).reduce((sum, sale) => sum + sale.amount, 0);
     
-    // Current month expenses
+    // Current month expenses (paid only)
     const currentMonthExpenses = expenses.filter(expense => {
       const expenseDate = new Date(expense.date);
-      return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear && expense.status === 'paid';
+      return expenseDate.getMonth() === currentMonth && 
+             expenseDate.getFullYear() === currentYear;
     }).reduce((sum, expense) => sum + expense.amount, 0);
     
-    // Total sales
-    const totalSales = sales.filter(sale => sale.payment_status === 'paid').reduce((sum, sale) => sum + sale.amount, 0);
+    // Current month purchases
+    const currentMonthPurchases = purchases.filter(purchase => {
+      const purchaseDate = new Date(purchase.date);
+      return purchaseDate.getMonth() === currentMonth && 
+             purchaseDate.getFullYear() === currentYear;
+    }).reduce((sum, purchase) => sum + purchase.total_amount, 0);
     
-    // Total expenses
-    const totalExpenses = expenses.filter(expense => expense.status === 'paid').reduce((sum, expense) => sum + expense.amount, 0);
+    // Current month payroll
+    const currentMonthPayroll = payrolls.filter(payroll => {
+      const payrollDate = new Date(payroll.payment_date);
+      return payrollDate.getMonth() === currentMonth && 
+             payrollDate.getFullYear() === currentYear;
+    }).reduce((sum, payroll) => sum + payroll.amount, 0);
+    
+    // Current month service fees
+    const currentMonthServiceFees = serviceFees.filter(fee => {
+      const feeDate = new Date(fee.created_at);
+      return feeDate.getMonth() === currentMonth && 
+             feeDate.getFullYear() === currentYear;
+    }).reduce((sum, fee) => sum + fee.amount, 0);
+    
+    // Current month total costs
+    const currentMonthTotalCosts = currentMonthExpenses + currentMonthPurchases + currentMonthPayroll + currentMonthServiceFees;
+    
+    // Current month profit
+    const currentMonthProfit = currentMonthSales - currentMonthTotalCosts;
+    
+    // All time totals
+    const totalSales = sales.filter(sale => sale.payment_status === 'paid').reduce((sum, sale) => sum + sale.amount, 0);
+    const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+    const totalPurchases = purchases.reduce((sum, purchase) => sum + purchase.total_amount, 0);
+    const totalPayroll = payrolls.reduce((sum, payroll) => sum + payroll.amount, 0);
+    const totalServiceFees = serviceFees.reduce((sum, fee) => sum + fee.amount, 0);
+    
+    // Total costs
+    const totalCosts = totalExpenses + totalPurchases + totalPayroll + totalServiceFees;
+    
+    // Net profit
+    const netProfit = totalSales - totalCosts;
     
     // Profit margin
-    const profitMargin = totalSales > 0 ? ((totalSales - totalExpenses) / totalSales) * 100 : 0;
+    const profitMargin = totalSales > 0 ? (netProfit / totalSales) * 100 : 0;
     
     // Total customers
     const totalCustomers = customers.length;
@@ -181,8 +320,18 @@ export default function DashboardPage() {
     return {
       currentMonthSales,
       currentMonthExpenses,
+      currentMonthPurchases,
+      currentMonthPayroll,
+      currentMonthServiceFees,
+      currentMonthTotalCosts,
+      currentMonthProfit,
       totalSales,
       totalExpenses,
+      totalPurchases,
+      totalPayroll,
+      totalServiceFees,
+      totalCosts,
+      netProfit,
       profitMargin: Math.round(profitMargin),
       totalCustomers,
       repeatCustomers,
@@ -246,10 +395,11 @@ export default function DashboardPage() {
           icon={<TrendingUp className="w-4 h-4" />}
         />
         <StatCard
-          title="Monthly Expenses"
-          value={`KSh ${stats.currentMonthExpenses.toLocaleString()}`}
-          subtitle="This month"
-          icon={<CreditCard className="w-4 h-4" />}
+          title="Monthly Profit"
+          value={`KSh ${stats.currentMonthProfit.toLocaleString()}`}
+          subtitle={`After all costs`}
+          icon={<DollarSign className="w-4 h-4" />}
+          trend={stats.currentMonthProfit >= 0 ? 'positive' : 'negative'}
         />
         <StatCard
           title="Total Customers"
@@ -265,8 +415,36 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Additional Metrics */}
+      {/* Cost Breakdown */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Monthly Expenses"
+          value={`KSh ${stats.currentMonthExpenses.toLocaleString()}`}
+          subtitle="Operational costs"
+          icon={<CreditCard className="w-4 h-4" />}
+        />
+        <StatCard
+          title="Monthly Purchases"
+          value={`KSh ${stats.currentMonthPurchases.toLocaleString()}`}
+          subtitle="Inventory/Stock"
+          icon={<Package className="w-4 h-4" />}
+        />
+        <StatCard
+          title="Monthly Payroll"
+          value={`KSh ${stats.currentMonthPayroll.toLocaleString()}`}
+          subtitle="Employee salaries"
+          icon={<Briefcase className="w-4 h-4" />}
+        />
+        <StatCard
+          title="Monthly Service Fees"
+          value={`KSh ${stats.currentMonthServiceFees.toLocaleString()}`}
+          subtitle="Platform fees"
+          icon={<Receipt className="w-4 h-4" />}
+        />
+      </div>
+
+      {/* All Time Totals */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
           title="Total Sales"
           value={`KSh ${stats.totalSales.toLocaleString()}`}
@@ -274,16 +452,17 @@ export default function DashboardPage() {
           icon={<DollarSign className="w-4 h-4" />}
         />
         <StatCard
-          title="Total Expenses"
-          value={`KSh ${stats.totalExpenses.toLocaleString()}`}
-          subtitle="All time"
+          title="Total Costs"
+          value={`KSh ${stats.totalCosts.toLocaleString()}`}
+          subtitle="All expenses combined"
           icon={<CreditCard className="w-4 h-4" />}
         />
         <StatCard
           title="Net Profit"
-          value={`KSh ${(stats.totalSales - stats.totalExpenses).toLocaleString()}`}
-          subtitle="Total revenue - expenses"
+          value={`KSh ${stats.netProfit.toLocaleString()}`}
+          subtitle="Total revenue - total costs"
           icon={<TrendingUp className="w-4 h-4" />}
+          trend={stats.netProfit >= 0 ? 'positive' : 'negative'}
         />
         <StatCard
           title="Avg Order Value"
@@ -291,14 +470,20 @@ export default function DashboardPage() {
           subtitle="Per transaction"
           icon={<Package className="w-4 h-4" />}
         />
+        <StatCard
+          title="Total Payroll"
+          value={`KSh ${stats.totalPayroll.toLocaleString()}`}
+          subtitle="All employee payments"
+          icon={<Briefcase className="w-4 h-4" />}
+        />
       </div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Sales vs Expenses */}
+        {/* Profit & Loss Chart */}
         <ChartCard
-          title="Sales vs Expenses"
-          description="Revenue and expenses trend (Last 30 days)"
+          title="Revenue vs Costs"
+          description="Sales vs Total Costs (Last 30 days)"
           className="lg:col-span-2"
         >
           <ResponsiveContainer width="100%" height={300}>
@@ -332,36 +517,114 @@ export default function DashboardPage() {
                 dot={false}
                 name="Expenses"
               />
+              <Line
+                type="monotone"
+                dataKey="purchases"
+                stroke="#f59e0b"
+                strokeWidth={2}
+                dot={false}
+                name="Purchases"
+              />
             </LineChart>
           </ResponsiveContainer>
         </ChartCard>
 
-        {/* Quick Stats */}
-        <ChartCard title="Quick Stats">
-          <div className="space-y-4">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-700">
-              <span className="text-slate-300">Total Sales (All Time)</span>
-              <span className="font-bold text-white">KSh {stats.totalSales.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between items-center pb-3 border-b border-slate-700">
-              <span className="text-slate-300">Total Expenses (All Time)</span>
-              <span className="font-bold text-white">KSh {stats.totalExpenses.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between items-center pb-3 border-b border-slate-700">
-              <span className="text-slate-300">Net Profit</span>
-              <span className="font-bold text-emerald-400">KSh {(stats.totalSales - stats.totalExpenses).toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between items-center pb-3 border-b border-slate-700">
-              <span className="text-slate-300">Active Customers</span>
-              <span className="font-bold text-white">{customers.filter(c => c.status === 'active').length}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-300">Avg Order Value</span>
-              <span className="font-bold text-white">KSh {stats.avgOrderValue.toLocaleString()}</span>
-            </div>
-          </div>
+        {/* Daily Profit */}
+        <ChartCard title="Daily Profit (Last 30 days)">
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+              <XAxis dataKey="date" stroke="#94a3b8" />
+              <YAxis stroke="#94a3b8" tickFormatter={(value) => `KSh ${(value / 1000).toFixed(0)}k`} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#1e293b',
+                  border: '1px solid #475569',
+                  borderRadius: '8px',
+                }}
+                formatter={(value: number) => [`KSh ${value.toLocaleString()}`, '']}
+                labelStyle={{ color: '#e2e8f0' }}
+              />
+              <Bar 
+                dataKey="profit" 
+                fill="#10b981" 
+                name="Daily Profit"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
         </ChartCard>
       </div>
+
+      {/* Cost Breakdown Chart */}
+      <ChartCard title="Cost Breakdown (Current Month)">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="p-4 bg-slate-800/30 rounded-lg">
+            <p className="text-slate-400 text-sm mb-2">Expenses</p>
+            <p className="text-2xl font-bold text-red-400">KSh {stats.currentMonthExpenses.toLocaleString()}</p>
+            <p className="text-xs text-slate-500 mt-1">
+              {((stats.currentMonthExpenses / stats.currentMonthTotalCosts) * 100).toFixed(1)}% of total costs
+            </p>
+            <div className="mt-2 w-full bg-slate-700 rounded-full h-1">
+              <div className="bg-red-500 h-1 rounded-full" style={{ 
+                width: `${(stats.currentMonthExpenses / stats.currentMonthTotalCosts) * 100}%` 
+              }}></div>
+            </div>
+          </div>
+          
+          <div className="p-4 bg-slate-800/30 rounded-lg">
+            <p className="text-slate-400 text-sm mb-2">Purchases</p>
+            <p className="text-2xl font-bold text-orange-400">KSh {stats.currentMonthPurchases.toLocaleString()}</p>
+            <p className="text-xs text-slate-500 mt-1">
+              {((stats.currentMonthPurchases / stats.currentMonthTotalCosts) * 100).toFixed(1)}% of total costs
+            </p>
+            <div className="mt-2 w-full bg-slate-700 rounded-full h-1">
+              <div className="bg-orange-500 h-1 rounded-full" style={{ 
+                width: `${(stats.currentMonthPurchases / stats.currentMonthTotalCosts) * 100}%` 
+              }}></div>
+            </div>
+          </div>
+          
+          <div className="p-4 bg-slate-800/30 rounded-lg">
+            <p className="text-slate-400 text-sm mb-2">Payroll</p>
+            <p className="text-2xl font-bold text-purple-400">KSh {stats.currentMonthPayroll.toLocaleString()}</p>
+            <p className="text-xs text-slate-500 mt-1">
+              {((stats.currentMonthPayroll / stats.currentMonthTotalCosts) * 100).toFixed(1)}% of total costs
+            </p>
+            <div className="mt-2 w-full bg-slate-700 rounded-full h-1">
+              <div className="bg-purple-500 h-1 rounded-full" style={{ 
+                width: `${(stats.currentMonthPayroll / stats.currentMonthTotalCosts) * 100}%` 
+              }}></div>
+            </div>
+          </div>
+          
+          <div className="p-4 bg-slate-800/30 rounded-lg">
+            <p className="text-slate-400 text-sm mb-2">Service Fees</p>
+            <p className="text-2xl font-bold text-cyan-400">KSh {stats.currentMonthServiceFees.toLocaleString()}</p>
+            <p className="text-xs text-slate-500 mt-1">
+              {((stats.currentMonthServiceFees / stats.currentMonthTotalCosts) * 100).toFixed(1)}% of total costs
+            </p>
+            <div className="mt-2 w-full bg-slate-700 rounded-full h-1">
+              <div className="bg-cyan-500 h-1 rounded-full" style={{ 
+                width: `${(stats.currentMonthServiceFees / stats.currentMonthTotalCosts) * 100}%` 
+              }}></div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="mt-4 p-4 bg-slate-800/50 rounded-lg">
+          <div className="flex justify-between items-center">
+            <span className="text-slate-300">Total Monthly Costs:</span>
+            <span className="text-2xl font-bold text-white">KSh {stats.currentMonthTotalCosts.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between items-center mt-2">
+            <span className="text-slate-300">Monthly Profit (Sales - All Costs):</span>
+            <span className={`text-2xl font-bold ${stats.currentMonthProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              KSh {stats.currentMonthProfit.toLocaleString()}
+            </span>
+          </div>
+        </div>
+      </ChartCard>
 
       {/* Sales by Payment Status */}
       {sales.length > 0 && (
