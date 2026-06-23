@@ -23,6 +23,8 @@ export default function SuperAdminLoginPage() {
     setError("");
     setLoading(true);
 
+    console.log("logging in");
+
     try {
       const { data, error: loginError } =
         await supabase.auth.signInWithPassword({
@@ -48,10 +50,7 @@ export default function SuperAdminLoginPage() {
         setSuccess(true);
         setError("");
 
-        // Redirect to dashboard after 1 second
-        setTimeout(() => {
-          router.push("/super-admin/dashboard");
-        }, 1000);
+        router.push("/super-admin/dashboard");
       }
     } catch (err: any) {
       setError(err.message || "An error occurred during login");
