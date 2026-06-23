@@ -1,33 +1,36 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useUser } from '@/context/UserContext';
-import { createClient } from '@/lib/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { AlertCircle, Check } from 'lucide-react';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useUser } from "@/context/UserContext";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { AlertCircle, Check } from "lucide-react";
 
 export default function SuperAdminLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const supabase = createClient();
   const { setUser } = useUser();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
-      const { data, error: loginError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data, error: loginError } =
+        await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+      console.log("Login response:", data, loginError);
 
       if (loginError) {
         setError(loginError.message);
@@ -35,24 +38,23 @@ export default function SuperAdminLoginPage() {
       }
 
       if (data.user) {
-        // The auth state change listener in UserContext will handle setting the user
-        // But we can also set it manually for immediate update
+        console.log("User logged in:", data.user);
         setUser({
           id: data.user.id,
           email: data.user.email || email,
-          name: data.user.user_metadata?.name || 'Admin',
+          name: data.user.user_metadata?.name || "Admin",
         });
 
         setSuccess(true);
-        setError('');
+        setError("");
 
         // Redirect to dashboard after 1 second
         setTimeout(() => {
-          router.push('/super-admin/dashboard');
+          router.push("/super-admin/dashboard");
         }, 1000);
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred during login');
+      setError(err.message || "An error occurred during login");
     } finally {
       setLoading(false);
     }
@@ -80,12 +82,16 @@ export default function SuperAdminLoginPage() {
             {success && (
               <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 flex gap-3">
                 <Check className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                <p className="text-emerald-200 text-sm">Login successful! Redirecting...</p>
+                <p className="text-emerald-200 text-sm">
+                  Login successful! Redirecting...
+                </p>
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Email</label>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Email
+              </label>
               <Input
                 type="email"
                 placeholder="your@email.com"
@@ -98,7 +104,9 @@ export default function SuperAdminLoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Password</label>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Password
+              </label>
               <Input
                 type="password"
                 placeholder="Enter your password"
@@ -115,16 +123,16 @@ export default function SuperAdminLoginPage() {
               disabled={loading || success}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
             >
-              {loading ? 'Signing In...' : 'Sign In'}
+              {loading ? "Signing In..." : "Sign In"}
             </Button>
           </form>
 
           {/* Footer */}
           <div className="text-center">
             <p className="text-sm text-slate-400">
-              Don&apos;t have an account?{' '}
+              Don&apos;t have an account?{" "}
               <button
-                onClick={() => router.push('/super-admin/signup')}
+                onClick={() => router.push("/super-admin/signup")}
                 className="text-blue-400 hover:text-blue-300 font-medium"
               >
                 Sign Up
