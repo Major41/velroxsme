@@ -1,4 +1,5 @@
 // app/api/admin/create-business-user/route.ts
+
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -30,7 +31,8 @@ export async function POST(request: NextRequest) {
           business_type: userData.business_type,
           role: 'business_admin',
         },
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/`,
+        // Use the production URL from environment variables
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
       },
     });
 

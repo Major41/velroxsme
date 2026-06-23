@@ -73,6 +73,7 @@ export default function SuperAdminSignupPage() {
             name,
             role: 'super-admin',
           },
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/`,
         },
       });
 

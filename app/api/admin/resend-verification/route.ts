@@ -1,4 +1,5 @@
-// app/api/admin/resend-verification/route.ts (Simpler version)
+// app/api/admin/resend-verification/route.ts
+
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -19,12 +20,13 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
-    // Resend confirmation email
+    // Resend confirmation email with the production URL
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email,
       options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}`,
+        // Use the production URL from environment variables
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
       },
     });
 

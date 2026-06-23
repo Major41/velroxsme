@@ -1,8 +1,10 @@
 // context/UserContext.tsx
+
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
 
 interface User {
   id: string;
@@ -13,7 +15,7 @@ interface User {
 interface UserContextType {
   user: User | null;
   setUser: (user: User | null) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   loading: boolean;
 }
 
@@ -58,6 +60,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event);
+        
         if (session?.user) {
           setUser({
             id: session.user.id,
@@ -77,8 +81,39 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [supabase]);
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
+    try {
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+      
+      // Clear user state
+      setUser(null);
+      
+      // Clear any stored session data
+      if (typeof window !== 'undefined') {
+        // Clear local storage
+        localStorage.removeItem('supabase.auth.token');
+        localStorage.removeItem('sb-');
+        
+        // Clear session storage
+        sessionStorage.removeItem('supabase.auth.token');
+        sessionStorage.removeItem('sb-');
+        
+        // Clear all cookies that might be related to auth
+        document.cookie.split(';').forEach(cookie => {
+          const [name] = cookie.trim().split('=');
+          if (name.startsWith('sb-') || name.startsWith('supabase')) {
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+          }
+        });
+      }
+      
+      console.log('User logged out successfully');
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // Even if there's an error, clear the user state
+      setUser(null);
+      throw error;
+    }
   };
 
   return (

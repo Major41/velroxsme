@@ -32,7 +32,7 @@ export default function SuperAdminLoginPage() {
           password,
         });
 
-      console.log("Login response:", data, loginError);
+      // console.log("Login response:", data, loginError);
 
       if (loginError) {
         setError(loginError.message);

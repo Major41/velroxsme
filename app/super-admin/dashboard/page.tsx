@@ -1,3 +1,5 @@
+// app/super-admin/page.tsx (your dashboard page)
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -21,22 +23,53 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { getSuperAdminStats, mockPaymentsData, mockBusinessesData } from '@/lib/super-admin-mock-data';
+import { useState, useEffect } from 'react';
 
 export default function SuperAdminOverview() {
   const router = useRouter();
-  const { user, logout } = useUser();
+  const { user, logout, loading } = useUser();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const stats = getSuperAdminStats();
 
   // Redirect to login if no user
-  if (!user) {
-    router.push('/super-admin/login');
-    return null;
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/super-admin/login');
+    }
+  }, [user, loading, router]);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      // After logout, redirect to login
+      router.push('/super-admin/login');
+      router.refresh(); // Force a refresh to clear any cached data
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Even if logout fails, force a redirect
+      router.push('/super-admin/login');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="text-slate-400 mt-4">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
-  const handleLogout = () => {
-    logout();
-    router.push('/super-admin/login');
-  };
+  // If no user, don't render (will redirect)
+  if (!user) {
+    return null;
+  }
 
   const revenueData = [
     { month: 'Jan', revenue: 120000 },
@@ -69,13 +102,15 @@ export default function SuperAdminOverview() {
         </div>
         <Button
           onClick={handleLogout}
-          className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2"
+          disabled={isLoggingOut}
+          className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2 disabled:opacity-50"
         >
           <LogOut className="w-4 h-4" />
-          Logout
+          {isLoggingOut ? 'Logging out...' : 'Logout'}
         </Button>
       </div>
 
+      {/* Rest of your dashboard content */}
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-slate-800/50 border-slate-700/50 p-6">
