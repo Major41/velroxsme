@@ -205,50 +205,121 @@ const resendVerificationEmail = async (business: any) => {
   }
 };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-    setLoading(true);
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError('');
+  setSuccess('');
+  setLoading(true);
 
-    try {
-      if (!user?.id) {
-        setError('User not authenticated');
-        return;
-      }
+  try {
+    if (!user?.id) {
+      setError('User not authenticated');
+      return;
+    }
 
-      // Validate form
-      if (
-        !formData.businessName ||
-        !formData.location ||
-        !formData.contactPersonName ||
-        !formData.contactPhone ||
-        !formData.contactEmail ||
-        !formData.subscriptionAmount
-      ) {
-        setError('Please fill in all required fields');
-        setLoading(false);
-        return;
-      }
+    // Validate form
+    if (
+      !formData.businessName ||
+      !formData.location ||
+      !formData.contactPersonName ||
+      !formData.contactPhone ||
+      !formData.contactEmail ||
+      !formData.subscriptionAmount
+    ) {
+      setError('Please fill in all required fields');
+      setLoading(false);
+      return;
+    }
 
-      // Only validate password for new businesses
-      if (!editingBusiness && (!formData.adminUsername || !formData.adminPassword)) {
-        setError('Admin username and password are required for new businesses');
-        setLoading(false);
-        return;
-      }
+    if (!editingBusiness && (!formData.adminUsername || !formData.adminPassword)) {
+      setError('Admin username and password are required for new businesses');
+      setLoading(false);
+      return;
+    }
 
-      if (!editingBusiness && formData.adminPassword.length < 6) {
-        setError('Password must be at least 6 characters');
-        setLoading(false);
-        return;
-      }
+    if (!editingBusiness && formData.adminPassword.length < 6) {
+      setError('Password must be at least 6 characters');
+      setLoading(false);
+      return;
+    }
 
-      let result;
+    let result;
+    
+    if (editingBusiness) {
+      // Update existing business (same as before)
+      const updateData: any = {
+        business_name: formData.businessName,
+        business_type: formData.businessType,
+        location: formData.location,
+        contact_person_name: formData.contactPersonName,
+        contact_position: formData.contactPosition,
+        contact_phone: formData.contactPhone,
+        contact_email: formData.contactEmail,
+        subscription_amount: parseFloat(formData.subscriptionAmount),
+        start_date: formData.startDate,
+        subscription_tier: formData.businessType,
+      };
       
-      if (editingBusiness) {
-        // Update existing business
-        const updateData: any = {
+      if (formData.adminUsername) {
+        updateData.admin_username = formData.adminUsername;
+      }
+      
+      if (formData.adminPassword) {
+        updateData.admin_password = formData.adminPassword;
+      }
+      
+      const { data, error: updateError } = await supabase
+        .from('businesses')
+        .update(updateData)
+        .eq('id', editingBusiness.id)
+        .select();
+
+      if (updateError) throw updateError;
+      
+      result = data;
+      setSuccess('Business updated successfully!');
+    } else {
+      // Create new business with Supabase Auth
+      // FIRST: Check if user already exists
+      const { data: existingUser } = await supabase
+        .from('businesses')
+        .select('contact_email')
+        .eq('contact_email', formData.contactEmail)
+        .single();
+
+      if (existingUser) {
+        setError('A business with this email already exists');
+        setLoading(false);
+        return;
+      }
+
+      // Create the auth user with email confirmation disabled for now
+      // or use a different approach
+      const response = await fetch('/api/admin/create-business-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.contactEmail,
+          password: formData.adminPassword,
+          userData: {
+            business_name: formData.businessName,
+            admin_username: formData.adminUsername,
+            business_type: formData.businessType,
+          }
+        }),
+      });
+
+      const authData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(authData.error || 'Failed to create user account');
+      }
+
+      // Insert business into database with auth_id
+      const { data, error: insertError } = await supabase
+        .from('businesses')
+        .insert({
+          super_admin_id: user.id,
           business_name: formData.businessName,
           business_type: formData.businessType,
           location: formData.location,
@@ -258,102 +329,55 @@ const resendVerificationEmail = async (business: any) => {
           contact_email: formData.contactEmail,
           subscription_amount: parseFloat(formData.subscriptionAmount),
           start_date: formData.startDate,
+          admin_username: formData.adminUsername,
+          admin_password: formData.adminPassword,
           subscription_tier: formData.businessType,
-        };
-        
-        // Only update username if provided
-        if (formData.adminUsername) {
-          updateData.admin_username = formData.adminUsername;
-        }
-        
-        // Only update password if provided (for security)
-        if (formData.adminPassword) {
-          updateData.admin_password = formData.adminPassword;
-        }
-        
-        const { data, error: updateError } = await supabase
-          .from('businesses')
-          .update(updateData)
-          .eq('id', editingBusiness.id)
-          .select();
+          auth_id: authData.user.id,
+          email_verified: authData.user.email_confirmed_at ? true : false, // Set based on auth response
+          subscription_status: 'active', // Add this field if not exists
+        })
+        .select();
 
-        if (updateError) throw updateError;
-        
-        result = data;
-        setSuccess('Business updated successfully!');
+      if (insertError) throw insertError;
+      
+      result = data;
+      
+      // Send verification email manually if needed
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email: formData.contactEmail,
+      });
+
+      if (resendError) {
+        console.error('Error sending verification email:', resendError);
+        setSuccess('Business created but verification email could not be sent. Please resend manually.');
       } else {
-        // Create new business with Supabase Auth
-        // First, create the auth user
-        const response = await fetch('/api/admin/create-business-user', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: formData.contactEmail,
-            password: formData.adminPassword,
-            userData: {
-              business_name: formData.businessName,
-              admin_username: formData.adminUsername,
-              business_type: formData.businessType,
-            }
-          }),
-        });
-
-        const authData = await response.json();
-
-        if (!response.ok) {
-          throw new Error(authData.error || 'Failed to create user account');
-        }
-
-        // Insert business into database with auth_id
-        const { data, error: insertError } = await supabase
-          .from('businesses')
-          .insert({
-            super_admin_id: user.id,
-            business_name: formData.businessName,
-            business_type: formData.businessType,
-            location: formData.location,
-            contact_person_name: formData.contactPersonName,
-            contact_position: formData.contactPosition,
-            contact_phone: formData.contactPhone,
-            contact_email: formData.contactEmail,
-            subscription_amount: parseFloat(formData.subscriptionAmount),
-            start_date: formData.startDate,
-            admin_username: formData.adminUsername,
-            admin_password: formData.adminPassword,
-            subscription_tier: formData.businessType,
-            auth_id: authData.user.id, // Store the auth user ID
-            email_verified: false, // Initially not verified
-          })
-          .select();
-
-        if (insertError) throw insertError;
-        
-        result = data;
         setSuccess(`Business created successfully! Verification email sent to ${formData.contactEmail}`);
       }
-
-      // Update businesses list
-      if (result) {
-        if (editingBusiness) {
-          setBusinesses(businesses.map(b => b.id === editingBusiness.id ? result[0] : b));
-        } else {
-          setBusinesses([result[0], ...businesses]);
-        }
-      }
-
-      resetForm();
-      
-      setTimeout(() => {
-        setShowForm(false);
-        setSuccess('');
-      }, 3000);
-    } catch (err: any) {
-      console.error('Error saving business:', err);
-      setError(err.message || 'An error occurred');
-    } finally {
-      setLoading(false);
     }
-  };
+
+    // Update businesses list
+    if (result) {
+      if (editingBusiness) {
+        setBusinesses(businesses.map(b => b.id === editingBusiness.id ? result[0] : b));
+      } else {
+        setBusinesses([result[0], ...businesses]);
+      }
+    }
+
+    resetForm();
+    
+    setTimeout(() => {
+      setShowForm(false);
+      setSuccess('');
+    }, 3000);
+  } catch (err: any) {
+    console.error('Error saving business:', err);
+    setError(err.message || 'An error occurred');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const getTierColor = (tier: string) => {
     switch (tier?.toLowerCase()) {

@@ -19,6 +19,7 @@ export default function BusinessLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [platformSettings, setPlatformSettings] = useState({
     platform_logo: '',
     platform_name: 'SME Dashboard',
@@ -57,65 +58,121 @@ export default function BusinessLoginPage() {
     fetchPlatformSettings();
   }, [supabase]);
 
-
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError('');
-  setIsLoading(true);
-
-  try {
-    // Sign in with Supabase Auth using email
-    const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
-      email: username, // Use email as username
-      password: password,
-    });
-
-    if (signInError) {
-      setError('Invalid email or password');
-      setIsLoading(false);
+  const handleResendVerification = async () => {
+    if (!username) {
+      setError('Please enter your email address first');
       return;
     }
 
-    if (!authData.user.email_confirmed_at) {
-      setError('Please verify your email before logging in. Check your inbox for the verification link.');
-      await supabase.auth.signOut();
-      setIsLoading(false);
-      return;
+    setIsResending(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/admin/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: username }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to resend verification email');
+      }
+
+      setError('✅ Verification email resent! Please check your inbox and spam folder.');
+    } catch (err: any) {
+      console.error('Error resending verification:', err);
+      setError(err.message || 'Failed to resend verification email');
+    } finally {
+      setIsResending(false);
     }
+  };
 
-    // Get business data from your businesses table using the auth user's email
-    const { data: business, error: businessError } = await supabase
-      .from('businesses')
-      .select('*')
-      .eq('contact_email', authData.user.email)
-      .single();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
 
-    if (businessError || !business) {
-      setError('Business account not found');
+    try {
+      // Step 1: Sign in with Supabase Auth
+      console.log('Attempting to sign in with email:', username);
+      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: username,
+        password: password,
+      });
+
+      if (signInError) {
+        console.error('Sign in error:', signInError);
+        
+        // Check if it's an email verification error
+        if (signInError.message?.toLowerCase().includes('email not confirmed') || 
+            signInError.code === 'email_not_confirmed') {
+          setError('Please verify your email before logging in. Check your inbox for the verification link.');
+          setIsLoading(false);
+          return;
+        }
+        
+        setError('Invalid email or password');
+        setIsLoading(false);
+        return;
+      }
+
+      if (!authData.user) {
+        setError('User not found');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('Auth user:', authData.user);
+
+      // Step 2: Check email confirmation
+      if (!authData.user.email_confirmed_at) {
+        setError('Please verify your email before logging in. Check your inbox for the verification link.');
+        await supabase.auth.signOut();
+        setIsLoading(false);
+        return;
+      }
+
+      // Step 3: Get business data using auth_id (NOT email)
+      console.log('Looking up business with auth_id:', authData.user.id);
+      const { data: business, error: businessError } = await supabase
+        .from('businesses')
+        .select('*')
+        .eq('auth_id', authData.user.id)
+        .single();
+
+      if (businessError || !business) {
+        console.error('Business lookup error:', businessError);
+        setError('Business account not found. Please contact support.');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('Business found:', business);
+
+      // Step 4: Check subscription status
+      // Note: Make sure your businesses table has a subscription_status column
+      // If not, you can add it or skip this check
+      if (business.subscription_status && business.subscription_status !== 'active') {
+        setError('Your subscription is not active. Please contact support.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Step 5: Set business in context (remove password for security)
+      const { admin_password, ...businessWithoutPassword } = business;
+      setBusiness(businessWithoutPassword);
+      
+      router.push('/dashboard');
+      
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError('An error occurred during login. Please try again.');
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    // Check subscription status
-    if (business.subscription_status !== 'active') {
-      setError('Your subscription is not active. Please contact support.');
-      setIsLoading(false);
-      return;
-    }
-
-    // Set business in context
-    const { admin_password, ...businessWithoutPassword } = business;
-    setBusiness(businessWithoutPassword);
-    
-    router.push('/dashboard');
-    
-  } catch (err: any) {
-    console.error('Login error:', err);
-    setError('An error occurred during login. Please try again.');
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
@@ -162,7 +219,7 @@ const handleSubmit = async (e: React.FormEvent) => {
               <div className="relative">
                 <User className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
                 <Input
-                  type="text"
+                  type="email"
                   placeholder="Enter your business email"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
@@ -190,10 +247,24 @@ const handleSubmit = async (e: React.FormEvent) => {
             </div>
 
             {error && (
-              <Alert className="border-red-500/50 bg-red-500/10">
-                <AlertCircle className="h-4 w-4 text-red-500" />
-                <AlertDescription className="text-red-500 text-sm">{error}</AlertDescription>
+              <Alert className={`border ${error.includes('✅') ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-red-500/50 bg-red-500/10'}`}>
+                <AlertCircle className={`h-4 w-4 ${error.includes('✅') ? 'text-emerald-500' : 'text-red-500'}`} />
+                <AlertDescription className={`text-sm ${error.includes('✅') ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {error}
+                </AlertDescription>
               </Alert>
+            )}
+
+            {error && error.includes('verify your email') && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10"
+                onClick={handleResendVerification}
+                disabled={isResending}
+              >
+                {isResending ? 'Sending...' : '🔄 Resend Verification Email'}
+              </Button>
             )}
 
             <Button
