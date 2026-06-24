@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 interface Business {
   id: string;
@@ -27,22 +27,33 @@ interface BusinessContextType {
 
 const BusinessContext = createContext<BusinessContextType | undefined>(undefined);
 
+// Protected routes that require authentication
+const PROTECTED_ROUTES = ['/dashboard', '/dashboard/*', '/settings', '/profile'];
+const AUTH_ROUTES = ['/', '/login', '/signup'];
+
 export function BusinessProvider({ children }: { children: ReactNode }) {
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
-    const router = useRouter();
-  
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const redirectToLogin = () => {
+    router.push('/');
+  };
 
   useEffect(() => {
     const checkSession = async () => {
       try {
+        setLoading(true);
+        
         // Get current session from Supabase
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Error checking session:', error);
           setBusiness(null);
+          handleUnauthorized();
           return;
         }
 
@@ -56,17 +67,38 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
 
           if (!businessError && businessData) {
             setBusiness(businessData);
+            // User is authenticated and has business data
+            return;
           } else {
+            // User is authenticated but no business found
+            console.error('Business not found for user:', session.user.email);
             setBusiness(null);
+            handleUnauthorized();
+            return;
           }
         } else {
+          // No session
           setBusiness(null);
+          handleUnauthorized();
+          return;
         }
       } catch (err) {
         console.error('Session check failed:', err);
         setBusiness(null);
+        handleUnauthorized();
       } finally {
         setLoading(false);
+      }
+    };
+
+    const handleUnauthorized = () => {
+      // Only redirect if we're on a protected route
+      const isProtectedRoute = PROTECTED_ROUTES.some(route => 
+        pathname?.startsWith(route.replace('/*', ''))
+      );
+      
+      if (isProtectedRoute) {
+        redirectToLogin();
       }
     };
 
@@ -75,7 +107,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session?.user) {
+        if (event === 'SIGNED_IN' && session?.user) {
           const { data: businessData } = await supabase
             .from('businesses')
             .select('*')
@@ -83,23 +115,36 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
             .single();
           
           setBusiness(businessData || null);
-        } else {
+          setLoading(false);
+        } else if (event === 'SIGNED_OUT') {
           setBusiness(null);
+          setLoading(false);
+          // Redirect to login if on protected route
+          const isProtectedRoute = PROTECTED_ROUTES.some(route => 
+            pathname?.startsWith(route.replace('/*', ''))
+          );
+          if (isProtectedRoute) {
+            redirectToLogin();
+          }
+        } else {
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [supabase, pathname]);
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
-    
-    setBusiness(null);
+    try {
+      await supabase.auth.signOut();
+      setBusiness(null);
+      router.push('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   return (
