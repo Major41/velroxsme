@@ -245,7 +245,7 @@ export default function CustomersPage() {
               <SelectTrigger className="w-40 bg-slate-800 border-slate-700 text-white">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
-              <SelectContent className="bg-slate-800 border-slate-700">
+              <SelectContent className="bg-slate-800 border-slate-700 text-white">
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
@@ -258,7 +258,7 @@ export default function CustomersPage() {
               <SelectTrigger className="w-48 bg-slate-800 border-slate-700 text-white">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
-              <SelectContent className="bg-slate-800 border-slate-700">
+              <SelectContent className="bg-slate-800 border-slate-700 text-white">
                 <SelectItem value="total_spent">Highest Spent</SelectItem>
                 <SelectItem value="visit_count">Most Visits</SelectItem>
                 <SelectItem value="last_purchase_date">Recent Purchase</SelectItem>

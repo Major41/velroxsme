@@ -1,10 +1,7 @@
-// context/UserContext.tsx
-
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
 
 interface User {
   id: string;
@@ -24,93 +21,62 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
+  const supabase = createClient();  // now stable — same instance every time
 
   useEffect(() => {
-    // Check for existing session on mount
+    let mounted = true;
+
+    const applySession = (session: { user: any } | null) => {
+      if (!mounted) return;
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.name || 'Admin',
+        });
+      } else {
+        setUser(null);
+      }
+    };
+
     const checkSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
-        
         if (error) {
           console.error('Error checking session:', error);
-          setUser(null);
+          applySession(null);
           return;
         }
-
-        if (session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.name || 'Admin',
-          });
-        } else {
-          setUser(null);
-        }
+        applySession(session);
       } catch (err) {
         console.error('Session check failed:', err);
-        setUser(null);
+        applySession(null);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
     checkSession();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event);
-        
-        if (session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.name || 'Admin',
-          });
-        } else {
-          setUser(null);
-        }
-        setLoading(false);
+      (_event, session) => {
+        applySession(session);
+        if (mounted) setLoading(false);
       }
     );
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [supabase]);  // now safe — supabase is a singleton
 
   const logout = async () => {
     try {
-      // Sign out from Supabase
       await supabase.auth.signOut();
-      
-      // Clear user state
       setUser(null);
-      
-      // Clear any stored session data
-      if (typeof window !== 'undefined') {
-        // Clear local storage
-        localStorage.removeItem('supabase.auth.token');
-        localStorage.removeItem('sb-');
-        
-        // Clear session storage
-        sessionStorage.removeItem('supabase.auth.token');
-        sessionStorage.removeItem('sb-');
-        
-        // Clear all cookies that might be related to auth
-        document.cookie.split(';').forEach(cookie => {
-          const [name] = cookie.trim().split('=');
-          if (name.startsWith('sb-') || name.startsWith('supabase')) {
-            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-          }
-        });
-      }
-      
-      console.log('User logged out successfully');
     } catch (error) {
       console.error('Error during logout:', error);
-      // Even if there's an error, clear the user state
       setUser(null);
       throw error;
     }

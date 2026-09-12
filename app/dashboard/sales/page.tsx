@@ -532,7 +532,7 @@ const updateOrCreateCustomer = async (saleData: any) => {
               className={
                 filterPeriod === period
                   ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                  : 'border-slate-600 text-slate-300'
+                  : 'border-slate-600 text-black'
               }
             >
               {period.charAt(0).toUpperCase() + period.slice(1)}
@@ -654,7 +654,7 @@ const updateOrCreateCustomer = async (saleData: any) => {
                   <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-700">
+                  <SelectContent className="bg-slate-900 border-slate-700 text-white">
                     <SelectItem value="Cash">Cash</SelectItem>
                     <SelectItem value="Credit Card">Credit Card</SelectItem>
                     <SelectItem value="Debit Card">Debit Card</SelectItem>
@@ -669,7 +669,7 @@ const updateOrCreateCustomer = async (saleData: any) => {
                   <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-700">
+                  <SelectContent className="bg-slate-900 border-slate-700 text-white">
                     <SelectItem value="paid">Paid</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="failed">Failed</SelectItem>
@@ -683,7 +683,7 @@ const updateOrCreateCustomer = async (saleData: any) => {
                   <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-700">
+                  <SelectContent className="bg-slate-900 border-slate-700 text-white">
                     <SelectItem value="completed">Completed</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>

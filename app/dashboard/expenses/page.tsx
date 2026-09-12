@@ -335,7 +335,7 @@ export default function ExpensesPage() {
             className={
               filterCategory === 'all'
                 ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                : 'border-slate-600 text-slate-300'
+                : 'border-slate-600 text-black'
             }
           >
             All
@@ -348,7 +348,7 @@ export default function ExpensesPage() {
               className={
                 filterCategory === cat
                   ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                  : 'border-slate-600 text-slate-300'
+                  : 'border-slate-600 text-black'
               }
             >
               {cat}
@@ -423,7 +423,7 @@ export default function ExpensesPage() {
                   <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-700">
+                  <SelectContent className="bg-slate-900 border-slate-700 text-white">
                     <SelectItem value="Cash">Cash</SelectItem>
                     <SelectItem value="Credit Card">Credit Card</SelectItem>
                     <SelectItem value="Debit Card">Debit Card</SelectItem>
@@ -440,7 +440,7 @@ export default function ExpensesPage() {
                 <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700">
+                <SelectContent className="bg-slate-900 border-slate-700 text-white">
                   <SelectItem value="paid">Paid</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                 </SelectContent>

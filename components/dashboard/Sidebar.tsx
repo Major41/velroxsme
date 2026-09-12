@@ -196,7 +196,7 @@ export function Sidebar() {
           </div>
 
           {/* Growth */}
-          <div>
+          {/* <div>
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 px-2">
               Growth
             </p>
@@ -225,7 +225,7 @@ export function Sidebar() {
                 );
               })}
             </div>
-          </div>
+          </div> */}
 
           {/* Settings */}
           <div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@/context/UserContext';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -25,8 +25,9 @@ import {
 } from '@/components/ui/dialog';
 
 export default function BusinessesPage() {
-  const { user } = useUser();
+  const { user, loading: userLoading } = useUser();
   const supabase = createClient();
+
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -52,17 +53,12 @@ export default function BusinessesPage() {
     adminPassword: '',
   });
 
-  // Fetch businesses on component mount
-  useEffect(() => {
-    fetchBusinesses();
-  }, [user]);
-
-  const fetchBusinesses = async () => {
+  const fetchBusinesses = useCallback(async () => {
     if (!user?.id) return;
-    
+
     setFetching(true);
     setError('');
-    
+
     try {
       const { data, error: fetchError } = await supabase
         .from('businesses')
@@ -70,9 +66,7 @@ export default function BusinessesPage() {
         .eq('super_admin_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (fetchError) {
-        throw fetchError;
-      }
+      if (fetchError) throw fetchError;
 
       setBusinesses(data || []);
     } catch (err: any) {
@@ -81,9 +75,22 @@ export default function BusinessesPage() {
     } finally {
       setFetching(false);
     }
-  };
+  }, [user?.id, supabase]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  // Fetch businesses once auth has hydrated and user is available
+  useEffect(() => {
+    if (userLoading) return;
+    if (!user?.id) {
+      // No user — stop the loading spinner so the UI isn't stuck
+      setFetching(false);
+      return;
+    }
+    fetchBusinesses();
+  }, [userLoading, user?.id, fetchBusinesses]);
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -120,9 +127,11 @@ export default function BusinessesPage() {
       contactPhone: business.contact_phone || '',
       contactEmail: business.contact_email || '',
       subscriptionAmount: business.subscription_amount?.toString() || '',
-      startDate: business.start_date?.split('T')[0] || new Date().toISOString().split('T')[0],
+      startDate:
+        business.start_date?.split('T')[0] ||
+        new Date().toISOString().split('T')[0],
       adminUsername: business.admin_username || '',
-      adminPassword: '', // Don't populate password for security
+      adminPassword: '',
     });
     setShowForm(true);
   };
@@ -134,14 +143,12 @@ export default function BusinessesPage() {
 
   const handleDeleteConfirm = async () => {
     if (!businessToDelete) return;
-    
+
     setLoading(true);
     setError('');
-    
+
     try {
-      // First, delete the auth user if they have an auth_id
       if (businessToDelete.auth_id) {
-        // Call an API endpoint to delete the auth user
         await fetch('/api/admin/delete-business-user', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -149,19 +156,16 @@ export default function BusinessesPage() {
         });
       }
 
-      // Delete the business from the database
       const { error: deleteError } = await supabase
         .from('businesses')
         .delete()
         .eq('id', businessToDelete.id);
 
-      if (deleteError) {
-        throw deleteError;
-      }
+      if (deleteError) throw deleteError;
 
       setSuccess('Business deleted successfully!');
-      setBusinesses(businesses.filter(b => b.id !== businessToDelete.id));
-      
+      setBusinesses((prev) => prev.filter((b) => b.id !== businessToDelete.id));
+
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
       console.error('Error deleting business:', err);
@@ -174,152 +178,72 @@ export default function BusinessesPage() {
     }
   };
 
- // In the businesses page, update the resend function
-const resendVerificationEmail = async (business: any) => {
-  setResendingEmail(business.id);
-  setError('');
-  
-  try {
-    const response = await fetch('/api/admin/resend-verification', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        email: business.contact_email,
-      }),
-    });
+  const resendVerificationEmail = async (business: any) => {
+    setResendingEmail(business.id);
+    setError('');
 
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.error || 'Failed to resend verification email');
-    }
-    
-    setSuccess(`Verification email sent to ${business.contact_email}`);
-    setTimeout(() => setSuccess(''), 3000);
-  } catch (err: any) {
-    console.error('Error resending email:', err);
-    setError(err.message);
-    setTimeout(() => setError(''), 3000);
-  } finally {
-    setResendingEmail(null);
-  }
-};
+    try {
+      const response = await fetch('/api/admin/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: business.contact_email }),
+      });
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError('');
-  setSuccess('');
-  setLoading(true);
+      const data = await response.json();
 
-  try {
-    if (!user?.id) {
-      setError('User not authenticated');
-      return;
-    }
-
-    // Validate form
-    if (
-      !formData.businessName ||
-      !formData.location ||
-      !formData.contactPersonName ||
-      !formData.contactPhone ||
-      !formData.contactEmail ||
-      !formData.subscriptionAmount
-    ) {
-      setError('Please fill in all required fields');
-      setLoading(false);
-      return;
-    }
-
-    if (!editingBusiness && (!formData.adminUsername || !formData.adminPassword)) {
-      setError('Admin username and password are required for new businesses');
-      setLoading(false);
-      return;
-    }
-
-    if (!editingBusiness && formData.adminPassword.length < 6) {
-      setError('Password must be at least 6 characters');
-      setLoading(false);
-      return;
-    }
-
-    let result;
-    
-    if (editingBusiness) {
-      // Update existing business (same as before)
-      const updateData: any = {
-        business_name: formData.businessName,
-        business_type: formData.businessType,
-        location: formData.location,
-        contact_person_name: formData.contactPersonName,
-        contact_position: formData.contactPosition,
-        contact_phone: formData.contactPhone,
-        contact_email: formData.contactEmail,
-        subscription_amount: parseFloat(formData.subscriptionAmount),
-        start_date: formData.startDate,
-        subscription_tier: formData.businessType,
-      };
-      
-      if (formData.adminUsername) {
-        updateData.admin_username = formData.adminUsername;
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to resend verification email');
       }
-      
-      if (formData.adminPassword) {
-        updateData.admin_password = formData.adminPassword;
-      }
-      
-      const { data, error: updateError } = await supabase
-        .from('businesses')
-        .update(updateData)
-        .eq('id', editingBusiness.id)
-        .select();
 
-      if (updateError) throw updateError;
-      
-      result = data;
-      setSuccess('Business updated successfully!');
-    } else {
-      // Create new business with Supabase Auth
-      // FIRST: Check if user already exists
-      const { data: existingUser } = await supabase
-        .from('businesses')
-        .select('contact_email')
-        .eq('contact_email', formData.contactEmail)
-        .single();
+      setSuccess(`Verification email sent to ${business.contact_email}`);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      console.error('Error resending email:', err);
+      setError(err.message);
+      setTimeout(() => setError(''), 3000);
+    } finally {
+      setResendingEmail(null);
+    }
+  };
 
-      if (existingUser) {
-        setError('A business with this email already exists');
-        setLoading(false);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    try {
+      if (!user?.id) {
+        setError('User not authenticated');
         return;
       }
 
-      // Create the auth user with email confirmation disabled for now
-      // or use a different approach
-      const response = await fetch('/api/admin/create-business-user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.contactEmail,
-          password: formData.adminPassword,
-          userData: {
-            business_name: formData.businessName,
-            admin_username: formData.adminUsername,
-            business_type: formData.businessType,
-          }
-        }),
-      });
-
-      const authData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(authData.error || 'Failed to create user account');
+      if (
+        !formData.businessName ||
+        !formData.location ||
+        !formData.contactPersonName ||
+        !formData.contactPhone ||
+        !formData.contactEmail ||
+        !formData.subscriptionAmount
+      ) {
+        setError('Please fill in all required fields');
+        return;
       }
 
-      // Insert business into database with auth_id
-      const { data, error: insertError } = await supabase
-        .from('businesses')
-        .insert({
-          super_admin_id: user.id,
+      if (!editingBusiness && (!formData.adminUsername || !formData.adminPassword)) {
+        setError('Admin username and password are required for new businesses');
+        return;
+      }
+
+      if (!editingBusiness && formData.adminPassword.length < 6) {
+        setError('Password must be at least 6 characters');
+        return;
+      }
+
+      let result;
+
+      if (editingBusiness) {
+        const updateData: any = {
           business_name: formData.businessName,
           business_type: formData.businessType,
           location: formData.location,
@@ -329,55 +253,120 @@ const handleSubmit = async (e: React.FormEvent) => {
           contact_email: formData.contactEmail,
           subscription_amount: parseFloat(formData.subscriptionAmount),
           start_date: formData.startDate,
-          admin_username: formData.adminUsername,
-          admin_password: formData.adminPassword,
           subscription_tier: formData.businessType,
-          auth_id: authData.user.id,
-          email_verified: authData.user.email_confirmed_at ? true : false, // Set based on auth response
-          subscription_status: 'active', // Add this field if not exists
-        })
-        .select();
+        };
 
-      if (insertError) throw insertError;
-      
-      result = data;
-      
-      // Send verification email manually if needed
-      const { error: resendError } = await supabase.auth.resend({
-        type: 'signup',
-        email: formData.contactEmail,
-      });
+        if (formData.adminUsername) updateData.admin_username = formData.adminUsername;
+        if (formData.adminPassword) updateData.admin_password = formData.adminPassword;
 
-      if (resendError) {
-        console.error('Error sending verification email:', resendError);
-        setSuccess('Business created but verification email could not be sent. Please resend manually.');
+        const { data, error: updateError } = await supabase
+          .from('businesses')
+          .update(updateData)
+          .eq('id', editingBusiness.id)
+          .select();
+
+        if (updateError) throw updateError;
+
+        result = data;
+        setSuccess('Business updated successfully!');
       } else {
-        setSuccess(`Business created successfully! Verification email sent to ${formData.contactEmail}`);
-      }
-    }
+        const { data: existingUser } = await supabase
+          .from('businesses')
+          .select('contact_email')
+          .eq('contact_email', formData.contactEmail)
+          .maybeSingle();
 
-    // Update businesses list
-    if (result) {
-      if (editingBusiness) {
-        setBusinesses(businesses.map(b => b.id === editingBusiness.id ? result[0] : b));
-      } else {
-        setBusinesses([result[0], ...businesses]);
-      }
-    }
+        if (existingUser) {
+          setError('A business with this email already exists');
+          return;
+        }
 
-    resetForm();
-    
-    setTimeout(() => {
-      setShowForm(false);
-      setSuccess('');
-    }, 3000);
-  } catch (err: any) {
-    console.error('Error saving business:', err);
-    setError(err.message || 'An error occurred');
-  } finally {
-    setLoading(false);
-  }
-};
+        const response = await fetch('/api/admin/create-business-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: formData.contactEmail,
+            password: formData.adminPassword,
+            userData: {
+              business_name: formData.businessName,
+              admin_username: formData.adminUsername,
+              business_type: formData.businessType,
+            },
+          }),
+        });
+
+        const authData = await response.json();
+
+        if (!response.ok) {
+          throw new Error(authData.error || 'Failed to create user account');
+        }
+
+        const { data, error: insertError } = await supabase
+          .from('businesses')
+          .insert({
+            super_admin_id: user.id,
+            business_name: formData.businessName,
+            business_type: formData.businessType,
+            location: formData.location,
+            contact_person_name: formData.contactPersonName,
+            contact_position: formData.contactPosition,
+            contact_phone: formData.contactPhone,
+            contact_email: formData.contactEmail,
+            subscription_amount: parseFloat(formData.subscriptionAmount),
+            start_date: formData.startDate,
+            admin_username: formData.adminUsername,
+            admin_password: formData.adminPassword,
+            subscription_tier: formData.businessType,
+            auth_id: authData.user.id,
+            email_verified: authData.user.email_confirmed_at ? true : false,
+            subscription_status: 'active',
+          })
+          .select();
+
+        if (insertError) throw insertError;
+
+        result = data;
+
+        const { error: resendError } = await supabase.auth.resend({
+          type: 'signup',
+          email: formData.contactEmail,
+        });
+
+        if (resendError) {
+          console.error('Error sending verification email:', resendError);
+          setSuccess(
+            'Business created but verification email could not be sent. Please resend manually.'
+          );
+        } else {
+          setSuccess(
+            `Business created successfully! Verification email sent to ${formData.contactEmail}`
+          );
+        }
+      }
+
+      if (result) {
+        if (editingBusiness) {
+          setBusinesses((prev) =>
+            prev.map((b) => (b.id === editingBusiness.id ? result[0] : b))
+          );
+        } else {
+          setBusinesses((prev) => [result[0], ...prev]);
+        }
+      }
+
+      resetForm();
+
+      setTimeout(() => {
+        setShowForm(false);
+        setSuccess('');
+      }, 3000);
+    } catch (err: any) {
+      console.error('Error saving business:', err);
+      setError(err.message || 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getTierColor = (tier: string) => {
     switch (tier?.toLowerCase()) {
@@ -398,7 +387,9 @@ const handleSubmit = async (e: React.FormEvent) => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-100">Businesses</h1>
-          <p className="text-slate-400 mt-1">Manage all registered businesses on the platform</p>
+          <p className="text-slate-400 mt-1">
+            Manage all registered businesses on the platform
+          </p>
         </div>
         <div className="flex gap-3">
           <Button
@@ -430,11 +421,11 @@ const handleSubmit = async (e: React.FormEvent) => {
             <h2 className="text-2xl font-bold text-slate-100">
               {editingBusiness ? 'Edit Business' : 'Add New Business'}
             </h2>
-            <button 
+            <button
               onClick={() => {
                 setShowForm(false);
                 resetForm();
-              }} 
+              }}
               className="text-slate-400 hover:text-slate-200"
             >
               <X className="w-6 h-6" />
@@ -456,12 +447,16 @@ const handleSubmit = async (e: React.FormEvent) => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Business Information - same as before */}
+            {/* Business Information */}
             <div>
-              <h3 className="text-lg font-semibold text-slate-100 mb-4">Business Information</h3>
+              <h3 className="text-lg font-semibold text-slate-100 mb-4">
+                Business Information
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Business Name *</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Business Name *
+                  </label>
                   <Input
                     type="text"
                     name="businessName"
@@ -474,7 +469,9 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Business Type *</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Business Type *
+                  </label>
                   <Select value={formData.businessType} onValueChange={handleSelectChange}>
                     <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
                       <SelectValue />
@@ -488,7 +485,9 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Business Location *</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Business Location *
+                  </label>
                   <Input
                     type="text"
                     name="location"
@@ -502,12 +501,16 @@ const handleSubmit = async (e: React.FormEvent) => {
               </div>
             </div>
 
-            {/* Contact Information - same as before */}
+            {/* Contact Information */}
             <div>
-              <h3 className="text-lg font-semibold text-slate-100 mb-4">Contact Information</h3>
+              <h3 className="text-lg font-semibold text-slate-100 mb-4">
+                Contact Information
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Contact Person Name *</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Contact Person Name *
+                  </label>
                   <Input
                     type="text"
                     name="contactPersonName"
@@ -520,7 +523,9 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Position</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Position
+                  </label>
                   <Input
                     type="text"
                     name="contactPosition"
@@ -532,7 +537,9 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Phone Number *</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Phone Number *
+                  </label>
                   <Input
                     type="tel"
                     name="contactPhone"
@@ -545,7 +552,9 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Company Email *</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Company Email *
+                  </label>
                   <Input
                     type="email"
                     name="contactEmail"
@@ -559,12 +568,16 @@ const handleSubmit = async (e: React.FormEvent) => {
               </div>
             </div>
 
-            {/* Subscription Details - same as before */}
+            {/* Subscription Details */}
             <div>
-              <h3 className="text-lg font-semibold text-slate-100 mb-4">Subscription Details</h3>
+              <h3 className="text-lg font-semibold text-slate-100 mb-4">
+                Subscription Details
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Subscription Amount (KSh) *</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Subscription Amount (KSh) *
+                  </label>
                   <Input
                     type="number"
                     name="subscriptionAmount"
@@ -577,7 +590,9 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Start Date *</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Start Date *
+                  </label>
                   <Input
                     type="date"
                     name="startDate"
@@ -590,9 +605,11 @@ const handleSubmit = async (e: React.FormEvent) => {
               </div>
             </div>
 
-            {/* Admin Credentials - same as before */}
+            {/* Admin Credentials */}
             <div>
-              <h3 className="text-lg font-semibold text-slate-100 mb-4">Admin Credentials</h3>
+              <h3 className="text-lg font-semibold text-slate-100 mb-4">
+                Admin Credentials
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -608,7 +625,9 @@ const handleSubmit = async (e: React.FormEvent) => {
                     required={!editingBusiness}
                   />
                   {editingBusiness && (
-                    <p className="text-xs text-slate-400 mt-1">Leave blank to keep current username</p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Leave blank to keep current username
+                    </p>
                   )}
                 </div>
 
@@ -619,21 +638,27 @@ const handleSubmit = async (e: React.FormEvent) => {
                   <Input
                     type="password"
                     name="adminPassword"
-                    placeholder={editingBusiness ? "Leave blank to keep current password" : "Minimum 6 characters"}
+                    placeholder={
+                      editingBusiness
+                        ? 'Leave blank to keep current password'
+                        : 'Minimum 6 characters'
+                    }
                     value={formData.adminPassword}
                     onChange={handleInputChange}
                     className="bg-slate-900 border-slate-700 text-white placeholder-slate-500"
                     required={!editingBusiness}
                   />
                   {editingBusiness && (
-                    <p className="text-xs text-slate-400 mt-1">Leave blank to keep current password</p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Leave blank to keep current password
+                    </p>
                   )}
                 </div>
               </div>
               <p className="text-xs text-slate-400 mt-2">
-                {editingBusiness 
-                  ? "Update credentials only if you want to change them" 
-                  : "These credentials will be used by the business admin to login to the dashboard"}
+                {editingBusiness
+                  ? 'Update credentials only if you want to change them'
+                  : 'These credentials will be used by the business admin to login to the dashboard'}
               </p>
             </div>
 
@@ -656,7 +681,13 @@ const handleSubmit = async (e: React.FormEvent) => {
                 className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 disabled={loading}
               >
-                {loading ? (editingBusiness ? 'Updating...' : 'Creating...') : (editingBusiness ? 'Update Business' : 'Create Business')}
+                {loading
+                  ? editingBusiness
+                    ? 'Updating...'
+                    : 'Creating...'
+                  : editingBusiness
+                    ? 'Update Business'
+                    : 'Create Business'}
               </Button>
             </div>
           </form>
@@ -677,28 +708,51 @@ const handleSubmit = async (e: React.FormEvent) => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-700 bg-slate-900/50">
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Business Name</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Location</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Contact</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Email Status</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Tier</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">Amount (KSh)</th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-slate-300 uppercase">Actions</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">
+                    Business Name
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">
+                    Location
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">
+                    Contact
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">
+                    Email Status
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">
+                    Tier
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">
+                    Amount (KSh)
+                  </th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-slate-300 uppercase">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700">
                 {businesses.map((business) => (
-                  <tr key={business.id} className="hover:bg-slate-700/30 transition-colors">
+                  <tr
+                    key={business.id}
+                    className="hover:bg-slate-700/30 transition-colors"
+                  >
                     <td className="px-6 py-4">
-                      <p className="text-sm font-medium text-slate-100">{business.business_name}</p>
+                      <p className="text-sm font-medium text-slate-100">
+                        {business.business_name}
+                      </p>
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-sm text-slate-300">{business.location}</p>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm">
-                        <p className="text-slate-100">{business.contact_person_name}</p>
-                        <p className="text-xs text-slate-500">{business.contact_email}</p>
+                        <p className="text-slate-100">
+                          {business.contact_person_name}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {business.contact_email}
+                        </p>
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -725,12 +779,20 @@ const handleSubmit = async (e: React.FormEvent) => {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`text-xs font-medium px-2 py-1 rounded ${getTierColor(business.subscription_tier)}`}>
-                        {business.subscription_tier?.charAt(0).toUpperCase() + business.subscription_tier?.slice(1) || 'Basic'}
+                      <span
+                        className={`text-xs font-medium px-2 py-1 rounded ${getTierColor(
+                          business.subscription_tier
+                        )}`}
+                      >
+                        {business.subscription_tier?.charAt(0).toUpperCase() +
+                          business.subscription_tier?.slice(1) || 'Basic'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm font-medium text-slate-100">KSh {parseFloat(business.subscription_amount).toLocaleString()}</p>
+                      <p className="text-sm font-medium text-slate-100">
+                        KSh{' '}
+                        {parseFloat(business.subscription_amount).toLocaleString()}
+                      </p>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex gap-2 justify-end">
@@ -760,7 +822,9 @@ const handleSubmit = async (e: React.FormEvent) => {
         </Card>
       ) : (
         <Card className="bg-slate-800/50 border-slate-700/50 p-12 text-center">
-          <p className="text-slate-400">No businesses added yet. Click "Add Business" to get started.</p>
+          <p className="text-slate-400">
+            No businesses added yet. Click "Add Business" to get started.
+          </p>
         </Card>
       )}
 
@@ -770,7 +834,8 @@ const handleSubmit = async (e: React.FormEvent) => {
           <DialogHeader>
             <DialogTitle>Delete Business</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Are you sure you want to delete "{businessToDelete?.business_name}"? This action cannot be undone.
+              Are you sure you want to delete "{businessToDelete?.business_name}"?
+              This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -412,7 +412,7 @@ export default function PurchasesPage() {
             <SelectTrigger className="w-40 bg-slate-800 border-slate-700 text-white">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
-            <SelectContent className="bg-slate-800 border-slate-700">
+            <SelectContent className="bg-slate-800 border-slate-700 text-white">
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="delivered">Delivered</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
@@ -424,7 +424,7 @@ export default function PurchasesPage() {
             <SelectTrigger className="w-40 bg-slate-800 border-slate-700 text-white">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
-            <SelectContent className="bg-slate-800 border-slate-700">
+            <SelectContent className="bg-slate-800 border-slate-700 text-white">
               <SelectItem value="all">All Categories</SelectItem>
               {getUniqueCategories().map((cat) => (
                 <SelectItem key={cat} value={cat}>{cat}</SelectItem>
@@ -535,7 +535,7 @@ export default function PurchasesPage() {
                   <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-700">
+                  <SelectContent className="bg-slate-900 border-slate-700 text-white">
                     <SelectItem value="Cash">Cash</SelectItem>
                     <SelectItem value="Credit Card">Credit Card</SelectItem>
                     <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
@@ -550,7 +550,7 @@ export default function PurchasesPage() {
                   <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-700">
+                  <SelectContent className="bg-slate-900 border-slate-700 text-white">
                     <SelectItem value="delivered">Delivered</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
@@ -587,7 +587,7 @@ export default function PurchasesPage() {
                   setEditingPurchase(null);
                   resetForm();
                 }}
-                className="border-slate-600 text-slate-300"
+                className="border-slate-600 text-black"
               >
                 Cancel
               </Button>
