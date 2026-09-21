@@ -1,18 +1,28 @@
+// context/UserContext.tsx
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+  useCallback,
+} from 'react';
+import { useRouter } from 'next/navigation';
 
 interface User {
   id: string;
   email: string;
   name: string;
+  role?: string;
 }
 
 interface UserContextType {
   user: User | null;
   setUser: (user: User | null) => void;
   logout: () => Promise<void>;
+  refresh: () => Promise<void>;
   loading: boolean;
 }
 
@@ -21,69 +31,61 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();  // now stable — same instance every time
+  const router = useRouter();
+
+  const fetchMe = useCallback(async () => {
+    try {
+      const res = await fetch('/api/super-admin/me', { cache: 'no-store' });
+      if (!res.ok) {
+        setUser(null);
+        return;
+      }
+      const { admin } = await res.json();
+      setUser({
+        id: admin.id,
+        email: admin.email,
+        name: admin.name || admin.full_name || 'Admin',
+        role: admin.role || 'super_admin',
+      });
+    } catch {
+      setUser(null);
+    }
+  }, []);
 
   useEffect(() => {
-    let mounted = true;
+    (async () => {
+      await fetchMe();
+      setLoading(false);
+    })();
+  }, [fetchMe]);
 
-    const applySession = (session: { user: any } | null) => {
-      if (!mounted) return;
-      if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata?.name || 'Admin',
-        });
-      } else {
-        setUser(null);
-      }
+  // Re-check when tab regains focus (fixes "stuck on loading" in new tabs)
+  useEffect(() => {
+    const onFocus = () => {
+      if (document.visibilityState === 'visible') fetchMe();
     };
-
-    const checkSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error('Error checking session:', error);
-          applySession(null);
-          return;
-        }
-        applySession(session);
-      } catch (err) {
-        console.error('Session check failed:', err);
-        applySession(null);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    checkSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        applySession(session);
-        if (mounted) setLoading(false);
-      }
-    );
-
+    document.addEventListener('visibilitychange', onFocus);
+    window.addEventListener('focus', onFocus);
     return () => {
-      mounted = false;
-      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', onFocus);
+      window.removeEventListener('focus', onFocus);
     };
-  }, [supabase]);  // now safe — supabase is a singleton
+  }, [fetchMe]);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
-      await supabase.auth.signOut();
-      setUser(null);
-    } catch (error) {
-      console.error('Error during logout:', error);
-      setUser(null);
-      throw error;
+      await fetch('/api/super-admin/logout', { method: 'POST' });
+    } catch (err) {
+      console.error('Logout API failed:', err);
     }
-  };
+    setUser(null);
+    router.push('/super-admin/login');
+  }, [router]);
 
   return (
-    <UserContext.Provider value={{ user, setUser, logout, loading }}>
+    <UserContext.Provider
+      value={{ user, setUser, logout, refresh: fetchMe, loading }}
+    >
       {children}
     </UserContext.Provider>
   );

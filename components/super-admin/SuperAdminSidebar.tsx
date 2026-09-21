@@ -40,7 +40,6 @@ export function SuperAdminSidebar() {
         const { data, error } = await supabase
           .from('platform_settings')
           .select('platform_logo, platform_name, company_name')
-          .eq('super_admin_id', user.id)
           .single();
 
         if (error && error.code !== 'PGRST116') {

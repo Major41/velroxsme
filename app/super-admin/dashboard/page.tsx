@@ -63,7 +63,6 @@ export default function SuperAdminOverview() {
       const { data, error: fetchError } = await supabase
         .from('businesses')
         .select('*')
-        .eq('super_admin_id', user.id)
         .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
@@ -234,7 +233,7 @@ export default function SuperAdminOverview() {
           disabled={isLoggingOut}
           className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2 disabled:opacity-50"
         >
-          <LogOut className="w-4 h-4" />
+          <LogOut className="w-4 h-4 text-black" />
           {isLoggingOut ? 'Logging out...' : 'Logout'}
         </Button>
       </div>

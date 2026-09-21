@@ -61,7 +61,6 @@ export default function SettingsPage() {
       const { data, error: fetchError } = await supabase
         .from('platform_settings')
         .select('*')
-        .eq('super_admin_id', user.id)
         .single();
 
       if (fetchError && fetchError.code !== 'PGRST116') {
@@ -177,7 +176,6 @@ export default function SettingsPage() {
 
       // Prepare settings data
       const settingsData = {
-        super_admin_id: user.id,
         platform_name: settings.platform_name,
         company_name: settings.company_name,
         platform_email: settings.platform_email,
@@ -194,7 +192,6 @@ export default function SettingsPage() {
       const { data: existingSettings } = await supabase
         .from('platform_settings')
         .select('id')
-        .eq('super_admin_id', user.id)
         .single();
 
       let result;
@@ -203,7 +200,6 @@ export default function SettingsPage() {
         result = await supabase
           .from('platform_settings')
           .update(settingsData)
-          .eq('super_admin_id', user.id);
       } else {
         // Insert new settings
         result = await supabase

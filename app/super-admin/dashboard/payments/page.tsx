@@ -99,7 +99,6 @@ export default function PaymentsPage() {
       const { data, error: fetchError } = await supabase
         .from('businesses')
         .select('id, business_name, subscription_tier, subscription_amount')
-        .eq('super_admin_id', user?.id)
         .order('business_name');
 
       if (fetchError) throw fetchError;
@@ -165,7 +164,6 @@ export default function PaymentsPage() {
           expiry_date: expiryDate.toISOString().split('T')[0],
           next_billing_date: nextBillingDate.toISOString().split('T')[0],
           payment_method: paymentMethod,
-          super_admin_id: user?.id,
         })
         .select();
 
@@ -320,10 +318,10 @@ export default function PaymentsPage() {
           <Button
             onClick={fetchPayments}
             variant="outline"
-            className="border-slate-600 text-slate-300 hover:bg-slate-800"
+            className="border-slate-600 text-black hover:bg-slate-800"
             disabled={loading}
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 mr-2 text-black ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           <Button
@@ -574,7 +572,7 @@ export default function PaymentsPage() {
                 <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
+                <SelectContent className="bg-slate-800 border-slate-700 text-white">
                   <SelectItem value="M-Pesa">M-Pesa</SelectItem>
                   <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
                   <SelectItem value="Cash">Cash</SelectItem>

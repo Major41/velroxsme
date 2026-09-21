@@ -22,7 +22,7 @@ export default function VerificationSuccessPage() {
         </p>
         
         <div className="flex flex-col gap-3">
-          <Link href="/business/login">
+          <Link href="/">
             <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors">
               Go to Business Login
             </button>

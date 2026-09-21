@@ -1,9 +1,9 @@
+// app/super-admin/login/page.tsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AlertCircle, Check } from "lucide-react";
@@ -15,7 +15,6 @@ export default function SuperAdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const supabase = createClient();
   const { setUser } = useUser();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -23,38 +22,35 @@ export default function SuperAdminLoginPage() {
     setError("");
     setLoading(true);
 
-    console.log("logging in");
-
     try {
-      const { data, error: loginError } =
-        await supabase.auth.signInWithPassword({
-          email,
+      const res = await fetch("/api/super-admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
           password,
-        });
+        }),
+      });
 
-      // console.log("Login response:", data, loginError);
+      const data = await res.json();
 
-      if (loginError) {
-        setError(loginError.message);
+      if (!res.ok) {
+        setError(data.error || "Login failed");
+        setLoading(false);
         return;
       }
 
-      if (data.user) {
-        console.log("User logged in:", data.user);
-        setUser({
-          id: data.user.id,
-          email: data.user.email || email,
-          name: data.user.user_metadata?.name || "Admin",
-        });
+      // Store admin in context
+      setUser({
+        id: data.admin.id,
+        email: data.admin.email,
+        name: data.admin.name || data.admin.full_name || "Admin",
+      });
 
-        setSuccess(true);
-        setError("");
-
-        router.push("/super-admin/dashboard");
-      }
+      setSuccess(true);
+      router.push("/super-admin/dashboard");
     } catch (err: any) {
       setError(err.message || "An error occurred during login");
-    } finally {
       setLoading(false);
     }
   };
@@ -63,13 +59,11 @@ export default function SuperAdminLoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-slate-900 border border-slate-800 rounded-lg shadow-xl p-8 space-y-6">
-          {/* Header */}
           <div className="text-center space-y-2">
             <h1 className="text-3xl font-bold text-white">Super Admin Login</h1>
             <p className="text-slate-400">Sign in to manage your platform</p>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleLogin} className="space-y-4">
             {error && (
               <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 flex gap-3">
@@ -126,7 +120,6 @@ export default function SuperAdminLoginPage() {
             </Button>
           </form>
 
-          {/* Footer */}
           <div className="text-center">
             <p className="text-sm text-slate-400">
               Don&apos;t have an account?{" "}

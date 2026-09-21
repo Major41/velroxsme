@@ -1,20 +1,20 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useUser } from '@/context/UserContext';
-import { createClient } from '@/lib/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useState, useEffect, useCallback } from "react";
+import { useUser } from "@/context/UserContext";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Plus, X, Edit2, Trash2, RefreshCw, Mail } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import { AlertCircle, Check } from 'lucide-react';
+} from "@/components/ui/select";
+import { Plus, X, Edit2, Trash2, RefreshCw } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { AlertCircle, Check } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +22,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 
 export default function BusinessesPage() {
   const { user, loading: userLoading } = useUser();
@@ -31,57 +31,53 @@ export default function BusinessesPage() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [businesses, setBusinesses] = useState<any[]>([]);
   const [editingBusiness, setEditingBusiness] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [businessToDelete, setBusinessToDelete] = useState<any>(null);
-  const [resendingEmail, setResendingEmail] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    businessName: '',
-    businessType: 'basic',
-    location: '',
-    contactPersonName: '',
-    contactPosition: '',
-    contactPhone: '',
-    contactEmail: '',
-    subscriptionAmount: '',
-    startDate: new Date().toISOString().split('T')[0],
-    adminUsername: '',
-    adminPassword: '',
+    businessName: "",
+    businessType: "basic",
+    location: "",
+    contactPersonName: "",
+    contactPosition: "",
+    contactPhone: "",
+    contactEmail: "",
+    subscriptionAmount: "",
+    startDate: new Date().toISOString().split("T")[0],
+    adminUsername: "",
+    adminPassword: "",
   });
 
   const fetchBusinesses = useCallback(async () => {
     if (!user?.id) return;
 
     setFetching(true);
-    setError('');
+    setError("");
 
     try {
       const { data, error: fetchError } = await supabase
-        .from('businesses')
-        .select('*')
-        .eq('super_admin_id', user.id)
-        .order('created_at', { ascending: false });
+        .from("businesses")
+        .select("*")
+        .order("created_at", { ascending: false });
 
       if (fetchError) throw fetchError;
 
       setBusinesses(data || []);
     } catch (err: any) {
-      console.error('Error fetching businesses:', err);
-      setError('Failed to fetch businesses: ' + err.message);
+      console.error("Error fetching businesses:", err);
+      setError("Failed to fetch businesses: " + err.message);
     } finally {
       setFetching(false);
     }
   }, [user?.id, supabase]);
 
-  // Fetch businesses once auth has hydrated and user is available
   useEffect(() => {
     if (userLoading) return;
     if (!user?.id) {
-      // No user — stop the loading spinner so the UI isn't stuck
       setFetching(false);
       return;
     }
@@ -89,7 +85,7 @@ export default function BusinessesPage() {
   }, [userLoading, user?.id, fetchBusinesses]);
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -101,37 +97,38 @@ export default function BusinessesPage() {
 
   const resetForm = () => {
     setFormData({
-      businessName: '',
-      businessType: 'basic',
-      location: '',
-      contactPersonName: '',
-      contactPosition: '',
-      contactPhone: '',
-      contactEmail: '',
-      subscriptionAmount: '',
-      startDate: new Date().toISOString().split('T')[0],
-      adminUsername: '',
-      adminPassword: '',
+      businessName: "",
+      businessType: "basic",
+      location: "",
+      contactPersonName: "",
+      contactPosition: "",
+      contactPhone: "",
+      contactEmail: "",
+      subscriptionAmount: "",
+      startDate: new Date().toISOString().split("T")[0],
+      adminUsername: "",
+      adminPassword: "",
     });
     setEditingBusiness(null);
   };
 
+  // Opens the form pre-filled for editing (no API call here)
   const handleEdit = (business: any) => {
     setEditingBusiness(business);
     setFormData({
-      businessName: business.business_name || '',
-      businessType: business.business_type || 'basic',
-      location: business.location || '',
-      contactPersonName: business.contact_person_name || '',
-      contactPosition: business.contact_position || '',
-      contactPhone: business.contact_phone || '',
-      contactEmail: business.contact_email || '',
-      subscriptionAmount: business.subscription_amount?.toString() || '',
+      businessName: business.business_name || "",
+      businessType: business.business_type || "basic",
+      location: business.location || "",
+      contactPersonName: business.contact_person_name || "",
+      contactPosition: business.contact_position || "",
+      contactPhone: business.contact_phone || "",
+      contactEmail: business.contact_email || "",
+      subscriptionAmount: business.subscription_amount?.toString() || "",
       startDate:
-        business.start_date?.split('T')[0] ||
-        new Date().toISOString().split('T')[0],
-      adminUsername: business.admin_username || '',
-      adminPassword: '',
+        business.start_date?.split("T")[0] ||
+        new Date().toISOString().split("T")[0],
+      adminUsername: business.admin_username || "",
+      adminPassword: "",
     });
     setShowForm(true);
   };
@@ -143,34 +140,20 @@ export default function BusinessesPage() {
 
   const handleDeleteConfirm = async () => {
     if (!businessToDelete) return;
-
     setLoading(true);
-    setError('');
-
+    setError("");
     try {
-      if (businessToDelete.auth_id) {
-        await fetch('/api/admin/delete-business-user', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: businessToDelete.auth_id }),
-        });
-      }
-
       const { error: deleteError } = await supabase
-        .from('businesses')
+        .from("businesses")
         .delete()
-        .eq('id', businessToDelete.id);
-
+        .eq("id", businessToDelete.id);
       if (deleteError) throw deleteError;
-
-      setSuccess('Business deleted successfully!');
       setBusinesses((prev) => prev.filter((b) => b.id !== businessToDelete.id));
-
-      setTimeout(() => setSuccess(''), 3000);
+      setSuccess("Business deleted successfully!");
+      setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
-      console.error('Error deleting business:', err);
-      setError('Failed to delete business: ' + err.message);
-      setTimeout(() => setError(''), 3000);
+      setError("Failed to delete business: " + err.message);
+      setTimeout(() => setError(""), 3000);
     } finally {
       setLoading(false);
       setDeleteDialogOpen(false);
@@ -178,43 +161,15 @@ export default function BusinessesPage() {
     }
   };
 
-  const resendVerificationEmail = async (business: any) => {
-    setResendingEmail(business.id);
-    setError('');
-
-    try {
-      const response = await fetch('/api/admin/resend-verification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: business.contact_email }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to resend verification email');
-      }
-
-      setSuccess(`Verification email sent to ${business.contact_email}`);
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err: any) {
-      console.error('Error resending email:', err);
-      setError(err.message);
-      setTimeout(() => setError(''), 3000);
-    } finally {
-      setResendingEmail(null);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
     setLoading(true);
 
     try {
       if (!user?.id) {
-        setError('User not authenticated');
+        setError("User not authenticated");
         return;
       }
 
@@ -226,128 +181,86 @@ export default function BusinessesPage() {
         !formData.contactEmail ||
         !formData.subscriptionAmount
       ) {
-        setError('Please fill in all required fields');
+        setError("Please fill in all required fields");
         return;
       }
 
-      if (!editingBusiness && (!formData.adminUsername || !formData.adminPassword)) {
-        setError('Admin username and password are required for new businesses');
+      if (
+        !editingBusiness &&
+        (!formData.adminUsername || !formData.adminPassword)
+      ) {
+        setError("Admin username and password are required for new businesses");
         return;
       }
 
       if (!editingBusiness && formData.adminPassword.length < 6) {
-        setError('Password must be at least 6 characters');
+        setError("Password must be at least 6 characters");
         return;
       }
 
-      let result;
+      let result: any[] = [];
 
       if (editingBusiness) {
-        const updateData: any = {
-          business_name: formData.businessName,
-          business_type: formData.businessType,
-          location: formData.location,
-          contact_person_name: formData.contactPersonName,
-          contact_position: formData.contactPosition,
-          contact_phone: formData.contactPhone,
-          contact_email: formData.contactEmail,
-          subscription_amount: parseFloat(formData.subscriptionAmount),
-          start_date: formData.startDate,
-          subscription_tier: formData.businessType,
-        };
-
-        if (formData.adminUsername) updateData.admin_username = formData.adminUsername;
-        if (formData.adminPassword) updateData.admin_password = formData.adminPassword;
-
-        const { data, error: updateError } = await supabase
-          .from('businesses')
-          .update(updateData)
-          .eq('id', editingBusiness.id)
-          .select();
-
-        if (updateError) throw updateError;
-
-        result = data;
-        setSuccess('Business updated successfully!');
-      } else {
-        const { data: existingUser } = await supabase
-          .from('businesses')
-          .select('contact_email')
-          .eq('contact_email', formData.contactEmail)
-          .maybeSingle();
-
-        if (existingUser) {
-          setError('A business with this email already exists');
-          return;
-        }
-
-        const response = await fetch('/api/admin/create-business-user', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        // --- UPDATE via API route ---
+        const response = await fetch("/api/admin/update-business", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            email: formData.contactEmail,
-            password: formData.adminPassword,
-            userData: {
-              business_name: formData.businessName,
-              admin_username: formData.adminUsername,
-              business_type: formData.businessType,
-            },
-          }),
-        });
-
-        const authData = await response.json();
-
-        if (!response.ok) {
-          throw new Error(authData.error || 'Failed to create user account');
-        }
-
-        const { data, error: insertError } = await supabase
-          .from('businesses')
-          .insert({
-            super_admin_id: user.id,
+            id: editingBusiness.id,
             business_name: formData.businessName,
             business_type: formData.businessType,
             location: formData.location,
             contact_person_name: formData.contactPersonName,
             contact_position: formData.contactPosition,
             contact_phone: formData.contactPhone,
-            contact_email: formData.contactEmail,
+            contact_email: formData.contactEmail.trim().toLowerCase(),
+            subscription_amount: parseFloat(formData.subscriptionAmount),
+            start_date: formData.startDate,
+            admin_username: formData.adminUsername || undefined,
+            admin_password: formData.adminPassword || undefined,
+          }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to update business");
+        }
+
+        result = [data.business];
+        setSuccess("Business updated successfully!");
+      } else {
+        // --- CREATE via API route ---
+        const response = await fetch("/api/admin/create-business-user", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            business_name: formData.businessName,
+            business_type: formData.businessType,
+            location: formData.location,
+            contact_person_name: formData.contactPersonName,
+            contact_position: formData.contactPosition,
+            contact_phone: formData.contactPhone,
+            contact_email: formData.contactEmail.trim().toLowerCase(),
             subscription_amount: parseFloat(formData.subscriptionAmount),
             start_date: formData.startDate,
             admin_username: formData.adminUsername,
             admin_password: formData.adminPassword,
-            subscription_tier: formData.businessType,
-            auth_id: authData.user.id,
-            email_verified: authData.user.email_confirmed_at ? true : false,
-            subscription_status: 'active',
-          })
-          .select();
-
-        if (insertError) throw insertError;
-
-        result = data;
-
-        const { error: resendError } = await supabase.auth.resend({
-          type: 'signup',
-          email: formData.contactEmail,
+          }),
         });
 
-        if (resendError) {
-          console.error('Error sending verification email:', resendError);
-          setSuccess(
-            'Business created but verification email could not be sent. Please resend manually.'
-          );
-        } else {
-          setSuccess(
-            `Business created successfully! Verification email sent to ${formData.contactEmail}`
-          );
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to create business");
         }
+
+        result = [data.business];
+        setSuccess("Business created successfully!");
       }
 
-      if (result) {
+      if (result.length > 0) {
         if (editingBusiness) {
           setBusinesses((prev) =>
-            prev.map((b) => (b.id === editingBusiness.id ? result[0] : b))
+            prev.map((b) => (b.id === editingBusiness.id ? result[0] : b)),
           );
         } else {
           setBusinesses((prev) => [result[0], ...prev]);
@@ -358,11 +271,11 @@ export default function BusinessesPage() {
 
       setTimeout(() => {
         setShowForm(false);
-        setSuccess('');
+        setSuccess("");
       }, 3000);
     } catch (err: any) {
-      console.error('Error saving business:', err);
-      setError(err.message || 'An error occurred');
+      console.error("Error saving business:", err);
+      setError(err.message || "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -370,14 +283,14 @@ export default function BusinessesPage() {
 
   const getTierColor = (tier: string) => {
     switch (tier?.toLowerCase()) {
-      case 'basic':
-        return 'bg-blue-500/20 text-blue-300';
-      case 'pro':
-        return 'bg-cyan-500/20 text-cyan-300';
-      case 'enterprise':
-        return 'bg-purple-500/20 text-purple-300';
+      case "basic":
+        return "bg-blue-500/20 text-blue-300";
+      case "pro":
+        return "bg-cyan-500/20 text-cyan-300";
+      case "enterprise":
+        return "bg-purple-500/20 text-purple-300";
       default:
-        return 'bg-slate-500/20 text-slate-300';
+        return "bg-slate-500/20 text-slate-300";
     }
   };
 
@@ -395,10 +308,12 @@ export default function BusinessesPage() {
           <Button
             onClick={fetchBusinesses}
             variant="outline"
-            className="border-slate-600 text-slate-300 hover:bg-slate-800"
+            className="border-slate-600 text-black hover:bg-slate-800"
             disabled={fetching}
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${fetching ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`w-4 h-4 mr-2 text-black ${fetching ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
           <Button
@@ -419,7 +334,7 @@ export default function BusinessesPage() {
         <Card className="bg-slate-800/50 border-slate-700/50 p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-slate-100">
-              {editingBusiness ? 'Edit Business' : 'Add New Business'}
+              {editingBusiness ? "Edit Business" : "Add New Business"}
             </h2>
             <button
               onClick={() => {
@@ -472,7 +387,10 @@ export default function BusinessesPage() {
                   <label className="block text-sm font-medium text-slate-300 mb-2">
                     Business Type *
                   </label>
-                  <Select value={formData.businessType} onValueChange={handleSelectChange}>
+                  <Select
+                    value={formData.businessType}
+                    onValueChange={handleSelectChange}
+                  >
                     <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
                       <SelectValue />
                     </SelectTrigger>
@@ -613,7 +531,7 @@ export default function BusinessesPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Admin Username {!editingBusiness && '*'}
+                    Admin Username {!editingBusiness && "*"}
                   </label>
                   <Input
                     type="text"
@@ -633,15 +551,15 @@ export default function BusinessesPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Admin Password {!editingBusiness && '*'}
+                    Admin Password {!editingBusiness && "*"}
                   </label>
                   <Input
                     type="password"
                     name="adminPassword"
                     placeholder={
                       editingBusiness
-                        ? 'Leave blank to keep current password'
-                        : 'Minimum 6 characters'
+                        ? "Leave blank to keep current password"
+                        : "Minimum 6 characters"
                     }
                     value={formData.adminPassword}
                     onChange={handleInputChange}
@@ -657,8 +575,8 @@ export default function BusinessesPage() {
               </div>
               <p className="text-xs text-slate-400 mt-2">
                 {editingBusiness
-                  ? 'Update credentials only if you want to change them'
-                  : 'These credentials will be used by the business admin to login to the dashboard'}
+                  ? "Update credentials only if you want to change them"
+                  : "These credentials will be used by the business admin to login to the dashboard"}
               </p>
             </div>
 
@@ -683,11 +601,11 @@ export default function BusinessesPage() {
               >
                 {loading
                   ? editingBusiness
-                    ? 'Updating...'
-                    : 'Creating...'
+                    ? "Updating..."
+                    : "Creating..."
                   : editingBusiness
-                    ? 'Update Business'
-                    : 'Create Business'}
+                    ? "Update Business"
+                    : "Create Business"}
               </Button>
             </div>
           </form>
@@ -718,9 +636,6 @@ export default function BusinessesPage() {
                     Contact
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">
-                    Email Status
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">
                     Tier
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">
@@ -743,7 +658,9 @@ export default function BusinessesPage() {
                       </p>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm text-slate-300">{business.location}</p>
+                      <p className="text-sm text-slate-300">
+                        {business.location}
+                      </p>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm">
@@ -756,42 +673,21 @@ export default function BusinessesPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      {business.email_verified ? (
-                        <span className="text-xs font-medium px-2 py-1 rounded bg-emerald-500/20 text-emerald-300">
-                          Verified
-                        </span>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium px-2 py-1 rounded bg-yellow-500/20 text-yellow-300">
-                            Pending
-                          </span>
-                          <Button
-                            onClick={() => resendVerificationEmail(business)}
-                            disabled={resendingEmail === business.id}
-                            size="sm"
-                            variant="outline"
-                            className="border-slate-600 text-slate-300 hover:bg-slate-800"
-                          >
-                            <Mail className="w-3 h-3 mr-1" />
-                            {resendingEmail === business.id ? 'Sending...' : 'Resend'}
-                          </Button>
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
                       <span
                         className={`text-xs font-medium px-2 py-1 rounded ${getTierColor(
-                          business.subscription_tier
+                          business.subscription_tier,
                         )}`}
                       >
                         {business.subscription_tier?.charAt(0).toUpperCase() +
-                          business.subscription_tier?.slice(1) || 'Basic'}
+                          business.subscription_tier?.slice(1) || "Basic"}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-sm font-medium text-slate-100">
-                        KSh{' '}
-                        {parseFloat(business.subscription_amount).toLocaleString()}
+                        KSh{" "}
+                        {parseFloat(
+                          business.subscription_amount,
+                        ).toLocaleString()}
                       </p>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -834,8 +730,8 @@ export default function BusinessesPage() {
           <DialogHeader>
             <DialogTitle>Delete Business</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Are you sure you want to delete "{businessToDelete?.business_name}"?
-              This action cannot be undone.
+              Are you sure you want to delete "{businessToDelete?.business_name}
+              "? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -851,7 +747,7 @@ export default function BusinessesPage() {
               className="bg-red-600 hover:bg-red-700 text-white"
               disabled={loading}
             >
-              {loading ? 'Deleting...' : 'Delete'}
+              {loading ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

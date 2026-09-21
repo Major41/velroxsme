@@ -1,92 +1,123 @@
 // app/api/admin/create-business-user/route.ts
-
-import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
+import { createClient } from '@/lib/supabase/server';
+import { getAuthCookie, SUPER_ADMIN_COOKIE } from '@/lib/cookies';
+import { verifyToken } from '@/lib/jwt';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, userData } = await request.json();
+    console.log('Create business request received');
+    const token = await getAuthCookie(SUPER_ADMIN_COOKIE);
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const claims = await verifyToken(token);
+    if (!claims || claims.role !== 'super_admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    if (!email || !password) {
+    const body = await request.json();
+    const {
+      business_name,
+      business_type,
+      location,
+      contact_person_name,
+      contact_position,
+      contact_phone,
+      contact_email,
+      subscription_amount,
+      start_date,
+      admin_username,
+      admin_password,
+    } = body;
+
+    // --- Validation ---
+    if (
+      !business_name ||
+      !location ||
+      !contact_person_name ||
+      !contact_phone ||
+      !contact_email ||
+      subscription_amount == null
+    ) {
       return NextResponse.json(
-        { error: 'Email and password are required' },
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+    if (!admin_username || !admin_password) {
+      return NextResponse.json(
+        { error: 'Admin username and password are required' },
+        { status: 400 }
+      );
+    }
+    if (admin_password.length < 6) {
+      return NextResponse.json(
+        { error: 'Password must be at least 6 characters' },
         { status: 400 }
       );
     }
 
-    // Create a regular Supabase client
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    const supabase = await createClient();
+    const normalizedEmail = contact_email.trim().toLowerCase();
 
-    // Use regular signUp which automatically sends verification email
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          business_name: userData.business_name,
-          admin_username: userData.admin_username,
-          business_type: userData.business_type,
-          role: 'business_admin',
-        },
-        // Use the production URL from environment variables
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
-      },
-    });
+    // --- Ensure email is unique ---
+    const { data: existing } = await supabase
+      .from('businesses')
+      .select('id')
+      .eq('contact_email', normalizedEmail)
+      .maybeSingle();
 
-    if (authError) {
-      console.error('Auth creation error:', authError);
+    if (existing) {
       return NextResponse.json(
-        { error: authError.message },
-        { status: 400 }
+        { error: 'A business with this email already exists' },
+        { status: 409 }
       );
     }
 
-    // The user object might be in authData.user or we need to get it from session
-    let userId = null;
-    
-    if (authData.user) {
-      userId = authData.user.id;
-    } else if (authData.session?.user) {
-      userId = authData.session.user.id;
-    }
+    // --- Hash password and insert ---
+    const password_hash = await bcrypt.hash(admin_password, 10);
 
-    // If we don't have the user ID immediately, wait and fetch it
-    if (!userId) {
-      // Wait a moment for the user to be created
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Try to get the user by email using admin API
-      const supabaseAdmin = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false,
-          },
-        }
+    const { data: business, error: insertError } = await supabase
+      .from('businesses')
+      .insert({
+       // id of the super admin creating it
+        business_name,
+        business_type,
+        location,
+        contact_person_name,
+        contact_position,
+        contact_phone,
+        contact_email: normalizedEmail,
+        subscription_amount: Number(subscription_amount),
+        start_date,
+        subscription_tier: business_type,
+        subscription_status: 'active',
+        admin_username,
+        password_hash,                     // ← hashed
+        email_verified: true,              // you own creation; trust it
+        // Do NOT set admin_password (plaintext) or auth_id anymore
+      })
+      .select('*')
+      .single();
+
+    if (insertError) {
+      console.error('Insert error:', insertError);
+      return NextResponse.json(
+        { error: insertError.message || 'Failed to create business' },
+        { status: 500 }
       );
-      
-      const { data: users } = await supabaseAdmin.auth.admin.listUsers();
-      const createdUser = users?.users.find((u: any) => u.email === email);
-      
-      if (createdUser) {
-        userId = createdUser.id;
-      }
     }
 
-    return NextResponse.json({
-      success: true,
-      user: { id: userId, email: email },
-      message: 'User created successfully. Verification email sent.',
-    });
-  } catch (error) {
-    console.error('Error creating business user:', error);
+    // Strip sensitive fields
+    const { password_hash: _ph, admin_password: _ap, ...safe } = business as any;
+
+    return NextResponse.json({ business: safe }, { status: 201 });
+  } catch (err: any) {
+    console.error('Create business error:', err);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: err.message || 'Server error' },
       { status: 500 }
     );
   }
