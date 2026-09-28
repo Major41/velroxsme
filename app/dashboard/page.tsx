@@ -392,26 +392,22 @@ export default function DashboardPage() {
           title="Monthly Sales"
           value={`KSh ${stats.currentMonthSales.toLocaleString()}`}
           subtitle="This month"
-          icon={<TrendingUp className="w-4 h-4" />}
         />
         <StatCard
           title="Monthly Profit"
           value={`KSh ${stats.currentMonthProfit.toLocaleString()}`}
           subtitle={`After all costs`}
-          icon={<DollarSign className="w-4 h-4" />}
           trend={stats.currentMonthProfit >= 0 ? 'positive' : 'negative'}
         />
         <StatCard
           title="Total Customers"
           value={stats.totalCustomers}
           subtitle={`${stats.repeatCustomers} returning`}
-          icon={<Users className="w-4 h-4" />}
         />
         <StatCard
           title="Profit Margin"
           value={`${stats.profitMargin}%`}
           subtitle="Overall profitability"
-          icon={<Percent className="w-4 h-4" />}
         />
       </div>
 
@@ -421,25 +417,21 @@ export default function DashboardPage() {
           title="Monthly Expenses"
           value={`KSh ${stats.currentMonthExpenses.toLocaleString()}`}
           subtitle="Operational costs"
-          icon={<CreditCard className="w-4 h-4" />}
         />
         <StatCard
           title="Monthly Purchases"
           value={`KSh ${stats.currentMonthPurchases.toLocaleString()}`}
           subtitle="Inventory/Stock"
-          icon={<Package className="w-4 h-4" />}
         />
         <StatCard
           title="Monthly Payroll"
           value={`KSh ${stats.currentMonthPayroll.toLocaleString()}`}
           subtitle="Employee salaries"
-          icon={<Briefcase className="w-4 h-4" />}
         />
         <StatCard
           title="Monthly Service Fees"
           value={`KSh ${stats.currentMonthServiceFees.toLocaleString()}`}
           subtitle="Platform fees"
-          icon={<Receipt className="w-4 h-4" />}
         />
       </div>
 
@@ -449,32 +441,27 @@ export default function DashboardPage() {
           title="Total Sales"
           value={`KSh ${stats.totalSales.toLocaleString()}`}
           subtitle="All time"
-          icon={<DollarSign className="w-4 h-4" />}
         />
         <StatCard
           title="Total Costs"
           value={`KSh ${stats.totalCosts.toLocaleString()}`}
           subtitle="All expenses combined"
-          icon={<CreditCard className="w-4 h-4" />}
         />
         <StatCard
           title="Net Profit"
           value={`KSh ${stats.netProfit.toLocaleString()}`}
           subtitle="Total revenue - total costs"
-          icon={<TrendingUp className="w-4 h-4" />}
           trend={stats.netProfit >= 0 ? 'positive' : 'negative'}
         />
         <StatCard
           title="Avg Order Value"
           value={`KSh ${stats.avgOrderValue.toLocaleString()}`}
           subtitle="Per transaction"
-          icon={<Package className="w-4 h-4" />}
         />
         <StatCard
           title="Total Payroll"
           value={`KSh ${stats.totalPayroll.toLocaleString()}`}
           subtitle="All employee payments"
-          icon={<Briefcase className="w-4 h-4" />}
         />
       </div>
 
