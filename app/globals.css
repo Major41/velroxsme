@@ -1,5 +1,5 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
+@import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -75,8 +75,8 @@
 }
 
 @theme inline {
-  --font-sans: 'Geist', 'Geist Fallback';
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --font-sans: "Geist", "Geist Fallback";
+  --font-mono: "Geist Mono", "Geist Mono Fallback";
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -121,5 +121,99 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+/* ============================================
+   Receipt — on-screen preview styles
+   ============================================ */
+
+/* Thermal (58mm) preview */
+.receipt-thermal {
+  width: 58mm;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #000;
+  background: #fff;
+}
+
+/* A4 preview */
+.receipt-a4 {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 15mm 18mm;
+  font-family: 'Helvetica', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #000;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+/* ============================================
+   Receipt — PRINT styles
+   ============================================ */
+
+@media print {
+  /* 1. Nuke Radix Dialog's body lock so the page has real height */
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    position: static !important;
+    pointer-events: auto !important;
+  }
+
+  /* 2. Hide everything by default */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* 3. Show the receipt subtree */
+  #receipt-print-area,
+  #receipt-print-area * {
+    visibility: visible !important;
+  }
+
+  /* 4. Reposition the receipt to the top of the paper
+        WITHOUT absolute positioning (which breaks inside Radix portals).
+        Instead: zero out everything that could shift it. */
+  #receipt-print-area {
+    position: static !important;
+    display: block !important;
+    margin: 0 !important;
+    padding: 15mm 18mm !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    box-sizing: border-box !important;
+    color: #000 !important;
+    background: #fff !important;
+    page-break-after: avoid;
+  }
+
+  /* 5. Thermal variant gets its own print sizing */
+  #receipt-print-area.receipt-thermal {
+    width: 58mm !important;
+    min-height: auto !important;
+    padding: 2mm !important;
+    font-size: 11px !important;
+  }
+
+  /* 6. Force backgrounds (black table header, etc.) to print */
+  #receipt-print-area * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  /* Thermal page size — harmless on A4 printers, ignored by most */
+  @page :first {
+    /* (Can't conditionally swap @page sizes per render in pure CSS;
+       if you print thermal, set the printer's paper to 58mm roll
+       and the receipt will still be correct width — the printer
+       just trims the extra whitespace.) */
   }
 }
