@@ -50,6 +50,10 @@ import {
 } from "@/components/ui/dialog";
 import { createClient } from "@/lib/supabase/client";
 import { useBusiness } from "@/context/BusinessContext";
+import { Printer } from "lucide-react"; // add Printer to the existing lucide import
+import { PurchaseReceipt } from "@/components/dashboard/PurchaseReceipt";
+import { PurchaseReceiptPDFButton } from "@/components/dashboard/PurchaseReceiptPDF";
+import { ThermalPurchasePrinterButton } from "@/components/dashboard/ThermalPurchasePrinterButton";
 
 interface Purchase {
   id: string;
@@ -106,6 +110,9 @@ export default function PurchasesPage() {
   const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(
     null,
   );
+  const [receiptPurchase, setReceiptPurchase] = useState<Purchase | null>(null);
+  const [receiptSize, setReceiptSize] = useState<"a4" | "thermal">("thermal");
+  const [showReceiptDialog, setShowReceiptDialog] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -528,6 +535,18 @@ export default function PurchasesPage() {
       label: "Actions",
       render: (_: any, row: Purchase) => (
         <div className="flex gap-2">
+          {/* NEW: Receipt button */}
+          <button
+            onClick={() => {
+              setReceiptPurchase(row);
+              setShowReceiptDialog(true);
+            }}
+            className="p-1 hover:bg-slate-700 rounded transition-colors"
+            title="Print receipt"
+          >
+            <Printer className="w-4 h-4 text-slate-400 hover:text-emerald-400" />
+          </button>
+
           <button
             onClick={() => handleEdit(row)}
             className="p-1 hover:bg-slate-700 rounded transition-colors"
@@ -872,7 +891,7 @@ export default function PurchasesPage() {
         />
       </div>
 
-            <ChartCard title="Purchase Details">
+      <ChartCard title="Purchase Details">
         {loading ? (
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -907,6 +926,76 @@ export default function PurchasesPage() {
             >
               {saving ? "Deleting..." : "Delete"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ============ RECEIPT DIALOG ============ */}
+      <Dialog open={showReceiptDialog} onOpenChange={setShowReceiptDialog}>
+        <DialogContent className="bg-slate-900 border-slate-700 text-slate-100 max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Generate Purchase Receipt</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Choose a printer size, then click Print. Only the receipt will be
+              printed.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Size picker */}
+          <div className="flex gap-2 mb-4">
+            <Button
+              variant={receiptSize === "thermal" ? "default" : "outline"}
+              onClick={() => setReceiptSize("thermal")}
+              className={
+                receiptSize === "thermal"
+                  ? "bg-blue-600 text-white"
+                  : "border-slate-600 text-slate-300"
+              }
+            >
+              Xprinter (58mm)
+            </Button>
+            <Button
+              variant={receiptSize === "a4" ? "default" : "outline"}
+              onClick={() => setReceiptSize("a4")}
+              className={
+                receiptSize === "a4"
+                  ? "bg-blue-600 text-white"
+                  : "border-slate-600 text-slate-300"
+              }
+            >
+              A4 Printer
+            </Button>
+          </div>
+
+          {/* Live preview */}
+          <div className="bg-white rounded-lg p-4 overflow-x-auto">
+            {receiptPurchase && (
+              <PurchaseReceipt purchase={receiptPurchase} size={receiptSize} />
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowReceiptDialog(false)}
+              className="border-slate-600 text-slate-300 hover:bg-slate-800"
+            >
+              Close
+            </Button>
+
+            {receiptPurchase && receiptSize === "a4" && (
+              <PurchaseReceiptPDFButton
+                purchase={receiptPurchase}
+                business={business ?? {}}
+              />
+            )}
+
+            {receiptPurchase && receiptSize === "thermal" && (
+              <ThermalPurchasePrinterButton
+                purchase={receiptPurchase}
+                business={business ?? {}}
+              />
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1050,8 +1139,6 @@ export default function PurchasesPage() {
           </div>
         </ChartCard>
       )}
-
-
     </div>
   );
 }

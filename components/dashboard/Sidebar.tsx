@@ -20,6 +20,8 @@ import {
   Building2,
   Wallet,
   Wrench,
+  FileText,
+  Receipt,
 } from "lucide-react";
 import { useState } from "react";
 import { useBusiness } from "@/context/BusinessContext";
@@ -59,6 +61,16 @@ export function Sidebar() {
       icon: <ShoppingCart className="w-4 h-4" />,
     },
     {
+      label: "Quotations", // ⬅️ NEW
+      href: "/dashboard/quotations", // ⬅️ NEW
+      icon: <FileText className="w-4 h-4" />, // ⬅️ NEW
+    },
+    {
+      label: "Invoices",
+      href: "/dashboard/invoices",
+      icon: <Receipt className="w-4 h-4" />,
+    },
+    {
       label: "Customers",
       href: "/dashboard/customers",
       icon: <Users className="w-4 h-4" />,
@@ -90,7 +102,11 @@ export function Sidebar() {
   ];
 
   const settingsItems: SidebarItem[] = [
-    { label: 'Employees', href: '/dashboard/users', icon: <Users className="w-4 h-4" /> },
+    {
+      label: "Employees",
+      href: "/dashboard/users",
+      icon: <Users className="w-4 h-4" />,
+    },
     {
       label: "Settings",
       href: "/dashboard/settings",
