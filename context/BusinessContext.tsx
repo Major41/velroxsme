@@ -1,10 +1,15 @@
 // context/BusinessContext.tsx
-'use client';
+"use client";
 
 import {
-  createContext, useContext, useState, ReactNode, useEffect, useCallback,
-} from 'react';
-import { useRouter } from 'next/navigation';
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+  useCallback,
+} from "react";
+import { useRouter } from "next/navigation";
 
 export interface Business {
   id: string;
@@ -28,7 +33,9 @@ interface BusinessContextType {
   loading: boolean;
 }
 
-const BusinessContext = createContext<BusinessContextType | undefined>(undefined);
+const BusinessContext = createContext<BusinessContextType | undefined>(
+  undefined,
+);
 
 export function BusinessProvider({ children }: { children: ReactNode }) {
   const [business, setBusiness] = useState<Business | null>(null);
@@ -37,7 +44,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
 
   const fetchMe = useCallback(async () => {
     try {
-      const res = await fetch('/api/business/me', { cache: 'no-store' });
+      const res = await fetch("/api/business/me", { cache: "no-store" });
       if (!res.ok) {
         setBusiness(null);
         return;
@@ -56,25 +63,29 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     })();
   }, [fetchMe]);
 
-  // Re-check when tab becomes visible again — no more stale tab
+  // Re-check when tab becomes visible again - no more stale tab
   useEffect(() => {
-    const onFocus = () => { if (document.visibilityState === 'visible') fetchMe(); };
-    document.addEventListener('visibilitychange', onFocus);
-    window.addEventListener('focus', onFocus);
+    const onFocus = () => {
+      if (document.visibilityState === "visible") fetchMe();
+    };
+    document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("focus", onFocus);
     return () => {
-      document.removeEventListener('visibilitychange', onFocus);
-      window.removeEventListener('focus', onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("focus", onFocus);
     };
   }, [fetchMe]);
 
   const logout = useCallback(async () => {
-    await fetch('/api/business/logout', { method: 'POST' });
+    await fetch("/api/business/logout", { method: "POST" });
     setBusiness(null);
-    router.push('/');
+    router.push("/");
   }, [router]);
 
   return (
-    <BusinessContext.Provider value={{ business, setBusiness, refresh: fetchMe, logout, loading }}>
+    <BusinessContext.Provider
+      value={{ business, setBusiness, refresh: fetchMe, logout, loading }}
+    >
       {children}
     </BusinessContext.Provider>
   );
@@ -82,6 +93,6 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
 
 export function useBusiness() {
   const ctx = useContext(BusinessContext);
-  if (!ctx) throw new Error('useBusiness must be used within BusinessProvider');
+  if (!ctx) throw new Error("useBusiness must be used within BusinessProvider");
   return ctx;
 }

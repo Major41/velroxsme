@@ -297,51 +297,113 @@ interface ReceiptPDFButtonProps {
   business: BusinessInfo;
 }
 
-export function ReceiptPDFButton({ sale, business }: ReceiptPDFButtonProps) {
+export function ReceiptPDFButton({
+  sale,
+  business,
+}: ReceiptPDFButtonProps) {
+  const [printing, setPrinting] = React.useState(false);
+  const [downloading, setDownloading] = React.useState(false);
+
+  const generatePDFBlob = async () => {
+    return await pdf(
+      <ReceiptDocument
+        sale={sale}
+        business={business}
+      />
+    ).toBlob();
+  };
+
   const handleDownload = async () => {
-    const blob = await pdf(<ReceiptDocument sale={sale} business={business} />).toBlob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Receipt-${sale.id.slice(0, 8)}.pdf`;
-    link.click();
-    URL.revokeObjectURL(url);
+    try {
+      setDownloading(true);
+
+      const blob = await generatePDFBlob();
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Receipt-${sale.id.slice(0, 8)}.pdf`;
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 1000);
+    } catch (error) {
+      console.error('PDF download error:', error);
+      alert('Failed to generate PDF.');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   const handlePrint = async () => {
-    const blob = await pdf(<ReceiptDocument sale={sale} business={business} />).toBlob();
-    const url = URL.createObjectURL(blob);
-    
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    iframe.src = url;
-    
-    iframe.onload = () => {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-        URL.revokeObjectURL(url);
-      }, 1000);
-    };
-    
-    document.body.appendChild(iframe);
+    try {
+      setPrinting(true);
+
+      const blob = await generatePDFBlob();
+      const url = URL.createObjectURL(blob);
+
+      const iframe = document.createElement('iframe');
+
+      iframe.style.position = 'fixed';
+      iframe.style.left = '-9999px';
+      iframe.style.top = '0';
+      iframe.style.width = '1px';
+      iframe.style.height = '1px';
+      iframe.style.border = '0';
+
+      iframe.src = url;
+
+      document.body.appendChild(iframe);
+
+      iframe.onload = () => {
+        setTimeout(() => {
+          try {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+          } catch (error) {
+            console.error('Print error:', error);
+            alert('Unable to open the print dialog.');
+          }
+
+          // Give the browser time to open the print dialog
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+            URL.revokeObjectURL(url);
+            setPrinting(false);
+          }, 2000);
+        }, 300);
+      };
+    } catch (error) {
+      console.error('A4 print error:', error);
+      alert('Failed to prepare the receipt for printing.');
+      setPrinting(false);
+    }
   };
 
   return (
     <div className="flex gap-2">
-      {/* <Button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white">
+      <Button
+        onClick={handlePrint}
+        disabled={printing}
+        className="bg-blue-600 hover:bg-blue-700 text-white"
+      >
         <Printer className="w-4 h-4 mr-2" />
-        Print Now
-      </Button> */}
-      <Button onClick={handleDownload} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+
+        {printing ? 'Preparing...' : 'Print A4'}
+      </Button>
+
+      <Button
+        onClick={handleDownload}
+        disabled={downloading}
+        className="bg-emerald-600 hover:bg-emerald-700 text-white"
+      >
         <Download className="w-4 h-4 mr-2" />
-        Download PDF
+
+        {downloading ? 'Generating...' : 'Download PDF'}
       </Button>
     </div>
   );

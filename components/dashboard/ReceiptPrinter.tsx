@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useRef, useMemo } from 'react';
-import { useReactToPrint } from 'react-to-print';
-import { SaleReceipt, type ReceiptSale } from './SaleReceipt';
-import { Button } from '@/components/ui/button';
-import { Printer } from 'lucide-react';
+import { useRef, useMemo } from "react";
+import { useReactToPrint } from "react-to-print";
+import { SaleReceipt, type ReceiptSale } from "./SaleReceipt";
+import { Button } from "@/components/ui/button";
+import { Printer } from "lucide-react";
 
 interface Props {
   sale: ReceiptSale | null;
-  size: 'a4' | 'thermal';
+  size: "a4" | "thermal";
   onClose?: () => void;
 }
 
@@ -17,7 +17,7 @@ export function ReceiptPrinter({ sale, size, onClose }: Props) {
 
   // @page rules injected into the print iframe
   const pageStyle = useMemo(() => {
-    if (size === 'thermal') {
+    if (size === "thermal") {
       return `
         @page { size: 58mm auto; margin: 2mm; }
         html, body { margin: 0; padding: 0; background: #fff; }
@@ -33,7 +33,7 @@ export function ReceiptPrinter({ sale, size, onClose }: Props) {
 
   const handlePrint = useReactToPrint({
     contentRef,
-    documentTitle: sale ? `Receipt-${sale.id.slice(0, 8)}` : 'Receipt',
+    documentTitle: sale ? `Receipt-${sale.id.slice(0, 8)}` : "Receipt",
     pageStyle,
     onAfterPrint: () => onClose?.(),
   });
@@ -44,7 +44,7 @@ export function ReceiptPrinter({ sale, size, onClose }: Props) {
     <>
       {/*
         IMPORTANT:
-        - Do NOT use display:none here — the print clone needs real layout.
+        - Do NOT use display:none here - the print clone needs real layout.
         - The wrapper is moved off-screen with position:fixed + clip.
         - The receipt itself still renders with its full width so
           react-to-print measures it correctly.
@@ -52,11 +52,11 @@ export function ReceiptPrinter({ sale, size, onClose }: Props) {
       <div
         aria-hidden="true"
         style={{
-          position: 'fixed',
-          left: '-10000px',
+          position: "fixed",
+          left: "-10000px",
           top: 0,
-          width: size === 'a4' ? '210mm' : '58mm',
-          pointerEvents: 'none',
+          width: size === "a4" ? "210mm" : "58mm",
+          pointerEvents: "none",
           opacity: 0,
           zIndex: -1,
         }}

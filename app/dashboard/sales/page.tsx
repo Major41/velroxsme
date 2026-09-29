@@ -747,7 +747,7 @@ export default function SalesPage() {
       {showAddForm && (
         <ChartCard title={editingSale ? "Edit Sale" : "Record a Sale"}>
           <div className="space-y-4">
-            {/* Product first — triggers auto-fill of category + price */}
+            {/* Product first - triggers auto-fill of category + price */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
@@ -771,7 +771,7 @@ export default function SalesPage() {
                 <p className="text-xs text-slate-400 mt-1">
                   {productSuggestions.length > 0
                     ? `Autofills category & price from ${productSuggestions.length} known product${productSuggestions.length === 1 ? "" : "s"}. New products are allowed.`
-                    : "No sales history yet — type any product name to create one."}
+                    : "No sales history yet - type any product name to create one."}
                 </p>
               </div>
               <div>
@@ -795,7 +795,7 @@ export default function SalesPage() {
               </div>
             </div>
 
-            {/* Customer row — name & phone cross-fill each other */}
+            {/* Customer row - name & phone cross-fill each other */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
@@ -1189,12 +1189,12 @@ export default function SalesPage() {
               Close
             </Button>
 
-            {/* A4 PDF download — only show when A4 is selected */}
+            {/* A4 PDF download - only show when A4 is selected */}
             {receiptSale && receiptSize === "a4" && (
               <ReceiptPDFButton sale={receiptSale} business={business ?? {}} />
             )}
 
-            {/* Thermal print — keep your existing ReceiptPrinter for thermal */}
+            {/* Thermal print - keep your existing ReceiptPrinter for thermal */}
             {receiptSale && receiptSize === "thermal" && (
               <ThermalPrinterButton
                 sale={receiptSale}

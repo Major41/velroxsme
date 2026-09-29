@@ -123,97 +123,191 @@
     @apply bg-background text-foreground;
   }
 }
-/* ============================================
-   Receipt — on-screen preview styles
-   ============================================ */
-
-/* Thermal (58mm) preview */
-.receipt-thermal {
-  width: 58mm;
-  font-family: 'Courier New', monospace;
-  font-size: 11px;
-  line-height: 1.35;
-  color: #000;
-  background: #fff;
-}
-
-/* A4 preview */
-.receipt-a4 {
+.a4-receipt {
   width: 210mm;
   min-height: 297mm;
-  padding: 15mm 18mm;
-  font-family: 'Helvetica', Arial, sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
-  color: #000;
-  background: #fff;
   box-sizing: border-box;
+  padding: 15mm;
+  background: white;
+  color: #000;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
 }
 
-/* ============================================
-   Receipt — PRINT styles
-   ============================================ */
+.a4-header {
+  display: flex;
+  align-items: center;
+  border-bottom: 2px solid #000;
+  padding-bottom: 18px;
+  margin-bottom: 25px;
+}
+
+.a4-logo {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  margin-right: 20px;
+}
+
+.a4-header-info {
+  flex: 1;
+}
+
+.a4-header-info h1 {
+  margin: 0 0 5px;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.a4-header-info p {
+  margin: 3px 0;
+  font-size: 11px;
+  color: #444;
+}
+
+.a4-receipt-info {
+  text-align: right;
+}
+
+.a4-receipt-info h2 {
+  margin: 0 0 8px;
+  font-size: 28px;
+}
+
+.a4-receipt-info p {
+  margin: 4px 0;
+  font-size: 11px;
+}
+
+.a4-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 30px;
+}
+
+.a4-meta > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.a4-payment {
+  text-align: right;
+}
+
+.a4-label {
+  font-size: 10px;
+  color: #666;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 3px;
+}
+
+.a4-meta strong {
+  font-size: 14px;
+}
+
+.a4-meta span:not(.a4-label) {
+  font-size: 11px;
+  color: #444;
+}
+
+.a4-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 30px;
+}
+
+.a4-table th {
+  background: #000;
+  color: #fff;
+  padding: 10px;
+  text-align: left;
+  font-size: 11px;
+}
+
+.a4-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #ddd;
+  font-size: 12px;
+}
+
+.a4-table th:nth-child(n+3),
+.a4-table td:nth-child(n+3) {
+  text-align: right;
+}
+
+.a4-totals {
+  width: 280px;
+  margin-left: auto;
+}
+
+.a4-totals > div {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 13px;
+}
+
+.a4-grand-total {
+  border-top: 2px solid #000;
+  margin-top: 5px;
+  padding-top: 12px !important;
+  font-size: 16px !important;
+}
+
+.a4-notes {
+  margin-top: 30px;
+}
+
+.a4-notes strong {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.a4-notes p {
+  margin: 0;
+  color: #444;
+}
+
+.a4-footer {
+  margin-top: 80px;
+  padding-top: 15px;
+  border-top: 1px solid #000;
+  text-align: center;
+  font-size: 11px;
+}
+
+.a4-footer p {
+  margin: 0 0 8px;
+}
 
 @media print {
-  /* 1. Nuke Radix Dialog's body lock so the page has real height */
-  html, body {
-    height: auto !important;
-    overflow: visible !important;
-    position: static !important;
-    pointer-events: auto !important;
-  }
-
-  /* 2. Hide everything by default */
-  body * {
-    visibility: hidden !important;
-  }
-
-  /* 3. Show the receipt subtree */
-  #receipt-print-area,
-  #receipt-print-area * {
-    visibility: visible !important;
-  }
-
-  /* 4. Reposition the receipt to the top of the paper
-        WITHOUT absolute positioning (which breaks inside Radix portals).
-        Instead: zero out everything that could shift it. */
-  #receipt-print-area {
-    position: static !important;
-    display: block !important;
-    margin: 0 !important;
-    padding: 15mm 18mm !important;
-    width: 210mm !important;
-    min-height: 297mm !important;
-    box-sizing: border-box !important;
-    color: #000 !important;
-    background: #fff !important;
-    page-break-after: avoid;
-  }
-
-  /* 5. Thermal variant gets its own print sizing */
-  #receipt-print-area.receipt-thermal {
-    width: 58mm !important;
-    min-height: auto !important;
-    padding: 2mm !important;
-    font-size: 11px !important;
-  }
-
-  /* 6. Force backgrounds (black table header, etc.) to print */
-  #receipt-print-area * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
   @page {
     size: A4;
     margin: 0;
   }
 
-  /* Thermal page size — harmless on A4 printers, ignored by most */
-  @page :first {
-    /* (Can't conditionally swap @page sizes per render in pure CSS;
-       if you print thermal, set the printer's paper to 58mm roll
-       and the receipt will still be correct width — the printer
-       just trims the extra whitespace.) */
+  html,
+  body {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  .a4-receipt {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 15mm;
+    margin: 0;
+    box-sizing: border-box;
+    page-break-after: avoid;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }

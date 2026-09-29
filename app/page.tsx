@@ -88,7 +88,7 @@ export default function BusinessLoginPage() {
         return;
       }
 
-      // Store in context — this is what the rest of the app reads
+      // Store in context - this is what the rest of the app reads
       setBusiness(data.business);
 
       // Redirect to dashboard
@@ -98,7 +98,7 @@ export default function BusinessLoginPage() {
       setError("An error occurred during login. Please try again.");
       setIsLoading(false);
     }
-    // Don't reset isLoading on success — we're navigating away
+    // Don't reset isLoading on success - we're navigating away
   };
 
   return (
@@ -139,7 +139,9 @@ export default function BusinessLoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-200">Email</label>
+              <label className="text-sm font-medium text-slate-200">
+                Email
+              </label>
               <div className="relative">
                 <User className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
                 <Input

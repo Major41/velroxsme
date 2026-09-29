@@ -1,21 +1,45 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { StatCard } from '@/components/dashboard/StatCard';
-import { ChartCard } from '@/components/dashboard/ChartCard';
-import { DataTable } from '@/components/dashboard/DataTable';
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { ShoppingCart, TrendingDown, Plus, Edit2, Trash2, CheckCircle, Clock, XCircle, Package } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { useState, useEffect, useMemo } from "react";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { ChartCard } from "@/components/dashboard/ChartCard";
+import { DataTable } from "@/components/dashboard/DataTable";
+import {
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+} from "recharts";
+import {
+  ShoppingCart,
+  TrendingDown,
+  Plus,
+  Edit2,
+  Trash2,
+  CheckCircle,
+  Clock,
+  XCircle,
+  Package,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -23,9 +47,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { createClient } from '@/lib/supabase/client';
-import { useBusiness } from '@/context/BusinessContext';
+} from "@/components/ui/dialog";
+import { createClient } from "@/lib/supabase/client";
+import { useBusiness } from "@/context/BusinessContext";
 
 interface Purchase {
   id: string;
@@ -37,7 +61,7 @@ interface Purchase {
   unit_price: number | string;
   total_amount: number | string;
   payment_method: string;
-  status: 'delivered' | 'pending' | 'cancelled';
+  status: "delivered" | "pending" | "cancelled";
   delivery_date: string | null;
   notes: string;
   created_at: string;
@@ -49,15 +73,24 @@ interface Suggestion {
   key: string;
   /** The display label (most recently used casing) */
   label: string;
-  /** Most recent row where this appeared — used to auto-fill companions */
+  /** Most recent row where this appeared - used to auto-fill companions */
   source: Purchase;
-  /** How many times it appeared — used for sorting */
+  /** How many times it appeared - used for sorting */
   count: number;
 }
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
+const COLORS = [
+  "#3b82f6",
+  "#10b981",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#ec4899",
+  "#06b6d4",
+  "#f97316",
+];
 
-const norm = (s: string | null | undefined) => (s || '').trim().toLowerCase();
+const norm = (s: string | null | undefined) => (s || "").trim().toLowerCase();
 
 export default function PurchasesPage() {
   const { business } = useBusiness();
@@ -65,28 +98,30 @@ export default function PurchasesPage() {
 
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterCategory, setFilterCategory] = useState('all');
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterCategory, setFilterCategory] = useState("all");
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(null);
+  const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(
+    null,
+  );
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    vendor_name: '',
-    category: '',
-    description: '',
-    quantity: '1',
-    unit_price: '',
-    total_amount: '',
-    payment_method: 'Bank Transfer',
-    status: 'pending',
-    delivery_date: '',
-    notes: '',
+    date: new Date().toISOString().split("T")[0],
+    vendor_name: "",
+    category: "",
+    description: "",
+    quantity: "1",
+    unit_price: "",
+    total_amount: "",
+    payment_method: "Bank Transfer",
+    status: "pending",
+    delivery_date: "",
+    notes: "",
   });
 
   // Fetch purchases on mount
@@ -99,16 +134,16 @@ export default function PurchasesPage() {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('purchases')
-        .select('*')
-        .eq('business_id', business.id)
-        .order('created_at', { ascending: false });
+        .from("purchases")
+        .select("*")
+        .eq("business_id", business.id)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setPurchases(data || []);
     } catch (err: any) {
-      console.error('Error fetching purchases:', err);
-      setError('Failed to load purchases data');
+      console.error("Error fetching purchases:", err);
+      setError("Failed to load purchases data");
     } finally {
       setLoading(false);
     }
@@ -122,11 +157,13 @@ export default function PurchasesPage() {
    * Group historical purchases by a normalized field and return the
    * most-recently-used casing as the label, plus a representative row.
    */
-  const buildSuggestions = (field: 'description' | 'vendor_name' | 'category'): Suggestion[] => {
+  const buildSuggestions = (
+    field: "description" | "vendor_name" | "category",
+  ): Suggestion[] => {
     const map = new Map<string, Suggestion>();
     // purchases is already sorted newest → oldest
     for (const p of purchases) {
-      const raw = (p[field] as string | null) || '';
+      const raw = (p[field] as string | null) || "";
       const key = norm(raw);
       if (!key) continue;
       const existing = map.get(key);
@@ -138,13 +175,22 @@ export default function PurchasesPage() {
     }
     // Sort: most frequently used first, then alphabetically
     return Array.from(map.values()).sort(
-      (a, b) => b.count - a.count || a.label.localeCompare(b.label)
+      (a, b) => b.count - a.count || a.label.localeCompare(b.label),
     );
   };
 
-  const productSuggestions = useMemo(() => buildSuggestions('description'), [purchases]);
-  const vendorSuggestions = useMemo(() => buildSuggestions('vendor_name'), [purchases]);
-  const categorySuggestions = useMemo(() => buildSuggestions('category'), [purchases]);
+  const productSuggestions = useMemo(
+    () => buildSuggestions("description"),
+    [purchases],
+  );
+  const vendorSuggestions = useMemo(
+    () => buildSuggestions("vendor_name"),
+    [purchases],
+  );
+  const categorySuggestions = useMemo(
+    () => buildSuggestions("category"),
+    [purchases],
+  );
 
   /** Given a typed product name, find the best matching historical entry */
   const findProductMatch = (value: string): Suggestion | undefined => {
@@ -195,7 +241,7 @@ export default function PurchasesPage() {
 
   /**
    * Called when vendor input changes. If it matches a known vendor,
-   * we don't necessarily want to overwrite the product — but we can
+   * we don't necessarily want to overwrite the product - but we can
    * leave this open for future logic. For now just store the raw value.
    */
   const handleVendorChange = (value: string) => {
@@ -245,11 +291,11 @@ export default function PurchasesPage() {
   const handleSubmit = async () => {
     if (!business?.id) return;
     setSaving(true);
-    setError('');
+    setError("");
 
     try {
       if (!formData.description || !formData.quantity || !formData.unit_price) {
-        setError('Please fill in Product, Quantity, and Unit Price');
+        setError("Please fill in Product, Quantity, and Unit Price");
         setSaving(false);
         return;
       }
@@ -257,8 +303,8 @@ export default function PurchasesPage() {
       const purchaseData = {
         business_id: business.id,
         date: formData.date,
-        vendor_name: formData.vendor_name || 'Unknown',
-        category: formData.category || 'Uncategorized',
+        vendor_name: formData.vendor_name || "Unknown",
+        category: formData.category || "Uncategorized",
         description: formData.description,
         quantity: parseInt(formData.quantity),
         unit_price: parseFloat(formData.unit_price),
@@ -271,24 +317,26 @@ export default function PurchasesPage() {
 
       if (editingPurchase) {
         const { error } = await supabase
-          .from('purchases')
+          .from("purchases")
           .update(purchaseData)
-          .eq('id', editingPurchase.id);
+          .eq("id", editingPurchase.id);
         if (error) throw error;
-        setSuccess('Purchase updated successfully!');
+        setSuccess("Purchase updated successfully!");
       } else {
-        const { error } = await supabase.from('purchases').insert([purchaseData]);
+        const { error } = await supabase
+          .from("purchases")
+          .insert([purchaseData]);
         if (error) throw error;
-        setSuccess('Purchase added successfully!');
+        setSuccess("Purchase added successfully!");
       }
 
       await fetchPurchases();
       resetForm();
       setShowAddForm(false);
       setEditingPurchase(null);
-      setTimeout(() => setSuccess(''), 3000);
+      setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
-      console.error('Error saving purchase:', err);
+      console.error("Error saving purchase:", err);
       setError(err.message);
     } finally {
       setSaving(false);
@@ -299,15 +347,18 @@ export default function PurchasesPage() {
     if (!purchaseToDelete) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from('purchases').delete().eq('id', purchaseToDelete.id);
+      const { error } = await supabase
+        .from("purchases")
+        .delete()
+        .eq("id", purchaseToDelete.id);
       if (error) throw error;
       setPurchases(purchases.filter((p) => p.id !== purchaseToDelete.id));
-      setSuccess('Purchase deleted successfully!');
+      setSuccess("Purchase deleted successfully!");
       setDeleteDialogOpen(false);
       setPurchaseToDelete(null);
-      setTimeout(() => setSuccess(''), 3000);
+      setTimeout(() => setSuccess(""), 3000);
     } catch (err: any) {
-      console.error('Error deleting purchase:', err);
+      console.error("Error deleting purchase:", err);
       setError(err.message);
     } finally {
       setSaving(false);
@@ -317,51 +368,61 @@ export default function PurchasesPage() {
   const handleEdit = (purchase: Purchase) => {
     setEditingPurchase(purchase);
     setFormData({
-      date: purchase.date.split('T')[0],
-      vendor_name: purchase.vendor_name || '',
-      category: purchase.category || '',
-      description: purchase.description || '',
+      date: purchase.date.split("T")[0],
+      vendor_name: purchase.vendor_name || "",
+      category: purchase.category || "",
+      description: purchase.description || "",
       quantity: String(purchase.quantity),
       unit_price: String(purchase.unit_price),
       total_amount: String(purchase.total_amount),
       payment_method: purchase.payment_method,
       status: purchase.status,
-      delivery_date: purchase.delivery_date ? purchase.delivery_date.split('T')[0] : '',
-      notes: purchase.notes || '',
+      delivery_date: purchase.delivery_date
+        ? purchase.delivery_date.split("T")[0]
+        : "",
+      notes: purchase.notes || "",
     });
     setShowAddForm(true);
   };
 
   const resetForm = () => {
     setFormData({
-      date: new Date().toISOString().split('T')[0],
-      vendor_name: '',
-      category: '',
-      description: '',
-      quantity: '1',
-      unit_price: '',
-      total_amount: '',
-      payment_method: 'Bank Transfer',
-      status: 'pending',
-      delivery_date: '',
-      notes: '',
+      date: new Date().toISOString().split("T")[0],
+      vendor_name: "",
+      category: "",
+      description: "",
+      quantity: "1",
+      unit_price: "",
+      total_amount: "",
+      payment_method: "Bank Transfer",
+      status: "pending",
+      delivery_date: "",
+      notes: "",
     });
-    setError('');
+    setError("");
   };
 
   /* ------------------------------------------------------------------ */
   /*  STATISTICS & CHARTS                                                */
   /* ------------------------------------------------------------------ */
 
-  const num = (v: number | string) => (typeof v === 'number' ? v : parseFloat(v) || 0);
+  const num = (v: number | string) =>
+    typeof v === "number" ? v : parseFloat(v) || 0;
 
   const totalPurchases = purchases.reduce((s, p) => s + num(p.total_amount), 0);
-  const deliveredPurchases = purchases.filter((p) => p.status === 'delivered').reduce((s, p) => s + num(p.total_amount), 0);
-  const pendingPurchases = purchases.filter((p) => p.status === 'pending').reduce((s, p) => s + num(p.total_amount), 0);
-  const avgPurchase = purchases.length > 0 ? Math.round(totalPurchases / purchases.length) : 0;
+  const deliveredPurchases = purchases
+    .filter((p) => p.status === "delivered")
+    .reduce((s, p) => s + num(p.total_amount), 0);
+  const pendingPurchases = purchases
+    .filter((p) => p.status === "pending")
+    .reduce((s, p) => s + num(p.total_amount), 0);
+  const avgPurchase =
+    purchases.length > 0 ? Math.round(totalPurchases / purchases.length) : 0;
 
   const getUniqueCategories = () =>
-    Array.from(new Set(purchases.map((p) => p.category).filter(Boolean))).sort();
+    Array.from(
+      new Set(purchases.map((p) => p.category).filter(Boolean)),
+    ).sort();
 
   const categoryData = () => {
     const grouped = purchases.reduce((acc: Record<string, number>, p) => {
@@ -376,49 +437,86 @@ export default function PurchasesPage() {
   };
 
   const statusData = [
-    { name: 'Delivered', value: purchases.filter((p) => p.status === 'delivered').length, fill: '#10b981' },
-    { name: 'Pending', value: purchases.filter((p) => p.status === 'pending').length, fill: '#f59e0b' },
-    { name: 'Cancelled', value: purchases.filter((p) => p.status === 'cancelled').length, fill: '#ef4444' },
+    {
+      name: "Delivered",
+      value: purchases.filter((p) => p.status === "delivered").length,
+      fill: "#10b981",
+    },
+    {
+      name: "Pending",
+      value: purchases.filter((p) => p.status === "pending").length,
+      fill: "#f59e0b",
+    },
+    {
+      name: "Cancelled",
+      value: purchases.filter((p) => p.status === "cancelled").length,
+      fill: "#ef4444",
+    },
   ].filter((i) => i.value > 0);
 
   const monthlyTrendData = () => {
-    const grouped = purchases.reduce((acc: Record<string, { month: string; total: number }>, p) => {
-      const month = p.date.substring(0, 7);
-      acc[month] = acc[month] || { month, total: 0 };
-      acc[month].total += num(p.total_amount);
-      return acc;
-    }, {});
+    const grouped = purchases.reduce(
+      (acc: Record<string, { month: string; total: number }>, p) => {
+        const month = p.date.substring(0, 7);
+        acc[month] = acc[month] || { month, total: 0 };
+        acc[month].total += num(p.total_amount);
+        return acc;
+      },
+      {},
+    );
     return Object.values(grouped).slice(-6);
   };
 
   const filteredPurchases = purchases.filter((p) => {
-    const matchesStatus = filterStatus === 'all' || p.status === filterStatus;
-    const matchesCategory = filterCategory === 'all' || p.category === filterCategory;
+    const matchesStatus = filterStatus === "all" || p.status === filterStatus;
+    const matchesCategory =
+      filterCategory === "all" || p.category === filterCategory;
     return matchesStatus && matchesCategory;
   });
 
   const columns = [
-    { key: 'date' as const, label: 'Date' },
-    { key: 'vendor_name' as const, label: 'Vendor' },
-    { key: 'category' as const, label: 'Category' },
-    { key: 'description' as const, label: 'Product' },
-    { key: 'quantity' as const, label: 'Qty' },
-    { key: 'total_amount' as const, label: 'Amount', render: (v: number | string) => `KSh ${num(v).toLocaleString()}` },
-    { key: 'payment_method' as const, label: 'Method' },
+    { key: "date" as const, label: "Date" },
+    { key: "vendor_name" as const, label: "Vendor" },
+    { key: "category" as const, label: "Category" },
+    { key: "description" as const, label: "Product" },
+    { key: "quantity" as const, label: "Qty" },
     {
-      key: 'status' as const,
-      label: 'Status',
+      key: "total_amount" as const,
+      label: "Amount",
+      render: (v: number | string) => `KSh ${num(v).toLocaleString()}`,
+    },
+    { key: "payment_method" as const, label: "Method" },
+    {
+      key: "status" as const,
+      label: "Status",
       render: (value: string) => {
         const config = {
-          delivered: { icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/20', label: 'Delivered' },
-          pending: { icon: Clock, color: 'text-yellow-400', bg: 'bg-yellow-500/20', label: 'Pending' },
-          cancelled: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/20', label: 'Cancelled' },
+          delivered: {
+            icon: CheckCircle,
+            color: "text-emerald-400",
+            bg: "bg-emerald-500/20",
+            label: "Delivered",
+          },
+          pending: {
+            icon: Clock,
+            color: "text-yellow-400",
+            bg: "bg-yellow-500/20",
+            label: "Pending",
+          },
+          cancelled: {
+            icon: XCircle,
+            color: "text-red-400",
+            bg: "bg-red-500/20",
+            label: "Cancelled",
+          },
         } as const;
         const c = config[value as keyof typeof config];
         if (!c) return value;
         const Icon = c.icon;
         return (
-          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${c.bg} ${c.color}`}>
+          <span
+            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${c.bg} ${c.color}`}
+          >
             <Icon className="w-3 h-3" />
             {c.label}
           </span>
@@ -426,15 +524,22 @@ export default function PurchasesPage() {
       },
     },
     {
-      key: 'actions' as const,
-      label: 'Actions',
+      key: "actions" as const,
+      label: "Actions",
       render: (_: any, row: Purchase) => (
         <div className="flex gap-2">
-          <button onClick={() => handleEdit(row)} className="p-1 hover:bg-slate-700 rounded transition-colors" title="Edit">
+          <button
+            onClick={() => handleEdit(row)}
+            className="p-1 hover:bg-slate-700 rounded transition-colors"
+            title="Edit"
+          >
             <Edit2 className="w-4 h-4 text-slate-400 hover:text-blue-400" />
           </button>
           <button
-            onClick={() => { setPurchaseToDelete(row); setDeleteDialogOpen(true); }}
+            onClick={() => {
+              setPurchaseToDelete(row);
+              setDeleteDialogOpen(true);
+            }}
             className="p-1 hover:bg-slate-700 rounded transition-colors"
             title="Delete"
           >
@@ -453,7 +558,9 @@ export default function PurchasesPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-white">Purchase Management</h1>
-        <p className="text-slate-400 mt-2">Monitor all purchases and vendor transactions for your business.</p>
+        <p className="text-slate-400 mt-2">
+          Monitor all purchases and vendor transactions for your business.
+        </p>
       </div>
 
       {error && (
@@ -489,7 +596,9 @@ export default function PurchasesPage() {
             <SelectContent className="bg-slate-800 border-slate-700 text-white">
               <SelectItem value="all">All Categories</SelectItem>
               {getUniqueCategories().map((cat) => (
-                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                <SelectItem key={cat} value={cat}>
+                  {cat}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -510,9 +619,11 @@ export default function PurchasesPage() {
 
       {/* ===================== ADD / EDIT FORM ===================== */}
       {showAddForm && (
-        <ChartCard title={editingPurchase ? 'Edit Purchase' : 'Record a Purchase'}>
+        <ChartCard
+          title={editingPurchase ? "Edit Purchase" : "Record a Purchase"}
+        >
           <div className="space-y-4">
-            {/* Product first — this is the trigger for auto-fill */}
+            {/* Product first - this is the trigger for auto-fill */}
             <div>
               <label className="text-sm font-medium text-slate-300 block mb-2 flex items-center gap-2">
                 <Package className="w-4 h-4 text-emerald-400" />
@@ -535,15 +646,17 @@ export default function PurchasesPage() {
               </datalist>
               <p className="text-xs text-slate-400 mt-1">
                 {productSuggestions.length > 0
-                  ? `Autofills vendor, category & price from ${productSuggestions.length} known product${productSuggestions.length === 1 ? '' : 's'}.`
-                  : 'No purchase history yet — start typing to create a new product.'}
+                  ? `Autofills vendor, category & price from ${productSuggestions.length} known product${productSuggestions.length === 1 ? "" : "s"}.`
+                  : "No purchase history yet - start typing to create a new product."}
               </p>
             </div>
 
             {/* Auto-filled companion fields (still editable) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="text-sm font-medium text-slate-300 block mb-2">Vendor *</label>
+                <label className="text-sm font-medium text-slate-300 block mb-2">
+                  Vendor *
+                </label>
                 <Input
                   type="text"
                   list="vendor-suggestions"
@@ -560,7 +673,9 @@ export default function PurchasesPage() {
                 </datalist>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-300 block mb-2">Category *</label>
+                <label className="text-sm font-medium text-slate-300 block mb-2">
+                  Category *
+                </label>
                 <Input
                   type="text"
                   list="category-suggestions"
@@ -577,11 +692,15 @@ export default function PurchasesPage() {
                 </datalist>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-300 block mb-2">Date *</label>
+                <label className="text-sm font-medium text-slate-300 block mb-2">
+                  Date *
+                </label>
                 <Input
                   type="date"
                   value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, date: e.target.value })
+                  }
                   className="bg-slate-900 border-slate-700 text-white"
                 />
               </div>
@@ -590,7 +709,9 @@ export default function PurchasesPage() {
             {/* Quantity, unit price, total */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="text-sm font-medium text-slate-300 block mb-2">Quantity *</label>
+                <label className="text-sm font-medium text-slate-300 block mb-2">
+                  Quantity *
+                </label>
                 <Input
                   type="number"
                   min="1"
@@ -601,7 +722,9 @@ export default function PurchasesPage() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-300 block mb-2">Unit Price (KSh) *</label>
+                <label className="text-sm font-medium text-slate-300 block mb-2">
+                  Unit Price (KSh) *
+                </label>
                 <Input
                   type="number"
                   placeholder="0"
@@ -611,7 +734,9 @@ export default function PurchasesPage() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-300 block mb-2">Total (KSh)</label>
+                <label className="text-sm font-medium text-slate-300 block mb-2">
+                  Total (KSh)
+                </label>
                 <Input
                   type="number"
                   value={formData.total_amount}
@@ -624,8 +749,15 @@ export default function PurchasesPage() {
             {/* Payment / status / delivery */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="text-sm font-medium text-slate-300 block mb-2">Payment Method</label>
-                <Select value={formData.payment_method} onValueChange={(v) => setFormData({ ...formData, payment_method: v })}>
+                <label className="text-sm font-medium text-slate-300 block mb-2">
+                  Payment Method
+                </label>
+                <Select
+                  value={formData.payment_method}
+                  onValueChange={(v) =>
+                    setFormData({ ...formData, payment_method: v })
+                  }
+                >
                   <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
                     <SelectValue />
                   </SelectTrigger>
@@ -639,8 +771,13 @@ export default function PurchasesPage() {
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-300 block mb-2">Order Status</label>
-                <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
+                <label className="text-sm font-medium text-slate-300 block mb-2">
+                  Order Status
+                </label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(v) => setFormData({ ...formData, status: v })}
+                >
                   <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
                     <SelectValue />
                   </SelectTrigger>
@@ -652,22 +789,30 @@ export default function PurchasesPage() {
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-300 block mb-2">Expected Delivery</label>
+                <label className="text-sm font-medium text-slate-300 block mb-2">
+                  Expected Delivery
+                </label>
                 <Input
                   type="date"
                   value={formData.delivery_date}
-                  onChange={(e) => setFormData({ ...formData, delivery_date: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, delivery_date: e.target.value })
+                  }
                   className="bg-slate-900 border-slate-700 text-white"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-300 block mb-2">Notes (Optional)</label>
+              <label className="text-sm font-medium text-slate-300 block mb-2">
+                Notes (Optional)
+              </label>
               <Textarea
                 placeholder="Additional notes about this purchase..."
                 value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, notes: e.target.value })
+                }
                 className="bg-slate-900 border-slate-700 text-white"
                 rows={2}
               />
@@ -676,7 +821,11 @@ export default function PurchasesPage() {
             <div className="flex gap-2 justify-end">
               <Button
                 variant="outline"
-                onClick={() => { setShowAddForm(false); setEditingPurchase(null); resetForm(); }}
+                onClick={() => {
+                  setShowAddForm(false);
+                  setEditingPurchase(null);
+                  resetForm();
+                }}
                 className="border-slate-600 text-slate-300 hover:bg-slate-800"
               >
                 Cancel
@@ -686,7 +835,11 @@ export default function PurchasesPage() {
                 disabled={saving}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white"
               >
-                {saving ? 'Saving...' : editingPurchase ? 'Update Purchase' : 'Save Purchase'}
+                {saving
+                  ? "Saving..."
+                  : editingPurchase
+                    ? "Update Purchase"
+                    : "Save Purchase"}
               </Button>
             </div>
           </div>
@@ -695,89 +848,31 @@ export default function PurchasesPage() {
 
       {/* ===================== STATS ===================== */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Purchases" value={`KSh ${totalPurchases.toLocaleString()}`} subtitle={`${purchases.length} orders`} icon={<ShoppingCart className="w-4 h-4" />} />
-        <StatCard title="Delivered" value={`KSh ${deliveredPurchases.toLocaleString()}`} subtitle={`${purchases.filter((p) => p.status === 'delivered').length} orders`} />
-        <StatCard title="Pending" value={`KSh ${pendingPurchases.toLocaleString()}`} subtitle={`${purchases.filter((p) => p.status === 'pending').length} orders`} />
-        <StatCard title="Avg Purchase" value={`KSh ${avgPurchase.toLocaleString()}`} subtitle="Per transaction" icon={<TrendingDown className="w-4 h-4" />} />
+        <StatCard
+          title="Total Purchases"
+          value={`KSh ${totalPurchases.toLocaleString()}`}
+          subtitle={`${purchases.length} orders`}
+          icon={<ShoppingCart className="w-4 h-4" />}
+        />
+        <StatCard
+          title="Delivered"
+          value={`KSh ${deliveredPurchases.toLocaleString()}`}
+          subtitle={`${purchases.filter((p) => p.status === "delivered").length} orders`}
+        />
+        <StatCard
+          title="Pending"
+          value={`KSh ${pendingPurchases.toLocaleString()}`}
+          subtitle={`${purchases.filter((p) => p.status === "pending").length} orders`}
+        />
+        <StatCard
+          title="Avg Purchase"
+          value={`KSh ${avgPurchase.toLocaleString()}`}
+          subtitle="Per transaction"
+          icon={<TrendingDown className="w-4 h-4" />}
+        />
       </div>
 
-      {/* ===================== CHARTS ===================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {categoryData().length > 0 && (
-          <ChartCard title="Purchases by Category">
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={categoryData()} layout="vertical" margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis type="number" stroke="#94a3b8" tickFormatter={(v) => `KSh ${(v / 1000).toFixed(0)}k`} />
-                <YAxis type="category" dataKey="name" stroke="#94a3b8" width={100} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px' }}
-                  formatter={(v: number) => [`KSh ${v.toLocaleString()}`, 'Amount']}
-                  labelStyle={{ color: '#e2e8f0' }}
-                />
-                <Bar dataKey="value" name="Amount">
-                  {categoryData().map((entry, i) => (
-                    <Cell key={`cell-${i}`} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        )}
-
-        {statusData.length > 0 && (
-          <ChartCard title="Status Distribution">
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie data={statusData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} dataKey="value" label={(entry) => `${entry.name}: ${entry.value}`}>
-                  {statusData.map((entry, i) => (
-                    <Cell key={`cell-${i}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px' }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        )}
-      </div>
-
-      {monthlyTrendData().length > 0 && (
-        <ChartCard title="Monthly Purchase Trend">
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={monthlyTrendData()}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-              <XAxis dataKey="month" stroke="#94a3b8" />
-              <YAxis stroke="#94a3b8" tickFormatter={(v) => `KSh ${(v / 1000).toFixed(0)}k`} />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px' }}
-                formatter={(v: number) => [`KSh ${v.toLocaleString()}`, 'Total']}
-                labelStyle={{ color: '#e2e8f0' }}
-              />
-              <Line type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={2} dot={{ fill: '#3b82f6', r: 4 }} name="Purchases" />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      )}
-
-      {getUniqueCategories().length > 0 && (
-        <ChartCard title="Category Summary">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {getUniqueCategories().map((category) => {
-              const categoryTotal = purchases.filter((p) => p.category === category).reduce((s, p) => s + num(p.total_amount), 0);
-              const categoryCount = purchases.filter((p) => p.category === category).length;
-              return (
-                <div key={category} className="p-3 bg-slate-700/30 rounded-lg border border-slate-600/50">
-                  <p className="text-sm font-medium text-slate-300">{category}</p>
-                  <p className="text-lg font-bold text-white">KSh {categoryTotal.toLocaleString()}</p>
-                  <p className="text-xs text-slate-400">{categoryCount} purchase(s)</p>
-                </div>
-              );
-            })}
-          </div>
-        </ChartCard>
-      )}
-
-      <ChartCard title="Purchase Details">
+            <ChartCard title="Purchase Details">
         {loading ? (
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -793,19 +888,170 @@ export default function PurchasesPage() {
           <DialogHeader>
             <DialogTitle>Delete Purchase</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Are you sure you want to delete this purchase? This action cannot be undone.
+              Are you sure you want to delete this purchase? This action cannot
+              be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} className="border-slate-600 text-slate-300 hover:bg-slate-800">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              className="border-slate-600 text-slate-300 hover:bg-slate-800"
+            >
               Cancel
             </Button>
-            <Button onClick={handleDelete} disabled={saving} className="bg-red-600 hover:bg-red-700 text-white">
-              {saving ? 'Deleting...' : 'Delete'}
+            <Button
+              onClick={handleDelete}
+              disabled={saving}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {saving ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ===================== CHARTS ===================== */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {categoryData().length > 0 && (
+          <ChartCard title="Purchases by Category">
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart
+                data={categoryData()}
+                layout="vertical"
+                margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis
+                  type="number"
+                  stroke="#94a3b8"
+                  tickFormatter={(v) => `KSh ${(v / 1000).toFixed(0)}k`}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  stroke="#94a3b8"
+                  width={100}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#1e293b",
+                    border: "1px solid #475569",
+                    borderRadius: "8px",
+                  }}
+                  formatter={(v: number) => [
+                    `KSh ${v.toLocaleString()}`,
+                    "Amount",
+                  ]}
+                  labelStyle={{ color: "#e2e8f0" }}
+                />
+                <Bar dataKey="value" name="Amount">
+                  {categoryData().map((entry, i) => (
+                    <Cell key={`cell-${i}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        )}
+
+        {statusData.length > 0 && (
+          <ChartCard title="Status Distribution">
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={statusData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={90}
+                  dataKey="value"
+                  label={(entry) => `${entry.name}: ${entry.value}`}
+                >
+                  {statusData.map((entry, i) => (
+                    <Cell key={`cell-${i}`} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#1e293b",
+                    border: "1px solid #475569",
+                    borderRadius: "8px",
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        )}
+      </div>
+
+      {monthlyTrendData().length > 0 && (
+        <ChartCard title="Monthly Purchase Trend">
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={monthlyTrendData()}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+              <XAxis dataKey="month" stroke="#94a3b8" />
+              <YAxis
+                stroke="#94a3b8"
+                tickFormatter={(v) => `KSh ${(v / 1000).toFixed(0)}k`}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#1e293b",
+                  border: "1px solid #475569",
+                  borderRadius: "8px",
+                }}
+                formatter={(v: number) => [
+                  `KSh ${v.toLocaleString()}`,
+                  "Total",
+                ]}
+                labelStyle={{ color: "#e2e8f0" }}
+              />
+              <Line
+                type="monotone"
+                dataKey="total"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                dot={{ fill: "#3b82f6", r: 4 }}
+                name="Purchases"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </ChartCard>
+      )}
+
+      {getUniqueCategories().length > 0 && (
+        <ChartCard title="Category Summary">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {getUniqueCategories().map((category) => {
+              const categoryTotal = purchases
+                .filter((p) => p.category === category)
+                .reduce((s, p) => s + num(p.total_amount), 0);
+              const categoryCount = purchases.filter(
+                (p) => p.category === category,
+              ).length;
+              return (
+                <div
+                  key={category}
+                  className="p-3 bg-slate-700/30 rounded-lg border border-slate-600/50"
+                >
+                  <p className="text-sm font-medium text-slate-300">
+                    {category}
+                  </p>
+                  <p className="text-lg font-bold text-white">
+                    KSh {categoryTotal.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    {categoryCount} purchase(s)
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </ChartCard>
+      )}
+
+
     </div>
   );
 }

@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Printer, Text, Line, Row, Br, Cut, render } from 'react-thermal-printer';
-import { Button } from '@/components/ui/button';
-import { Printer as PrinterIcon } from 'lucide-react';
+import { useState } from "react";
+import { print, requestUsbDevice } from "universal-thermal-printer/web";
+
+import { Button } from "@/components/ui/button";
+import { Printer as PrinterIcon } from "lucide-react";
 
 interface Props {
   sale: any;
@@ -15,76 +16,184 @@ export function ThermalPrinterButton({ sale, business }: Props) {
 
   const handlePrint = async () => {
     setPrinting(true);
+
     try {
-      // 1. Build the receipt using thermal-printer primitives
-      const receipt = (
-        <Printer type="epson" width={32} characterSet="pc437_usa">
-          {/* Header */}
-          <Text align="center" bold size={{ width: 2, height: 2 }}>
-            {business?.business_name || 'BUSINESS'}
-          </Text>
-          {business?.location && (
-            <Text align="center">{business.location}</Text>
-          )}
-          {business?.contact_phone && (
-            <Text align="center">Tel: {business.contact_phone}</Text>
-          )}
-          <Br />
-          <Line />
+      // Ask the browser to let the user select the USB printer.
+      const printer = await requestUsbDevice();
 
-          {/* Meta */}
-          <Row left="Receipt" right={`RC-${sale.id.slice(0, 8).toUpperCase()}`} />
-          <Row left="Date" right={sale.date} />
-          <Row left="Customer" right={sale.customer_name || 'Walk-in'} />
-          {sale.customer_phone && (
-            <Row left="Phone" right={sale.customer_phone} />
-          )}
-
-          <Line />
-
-          {/* Item */}
-          <Text bold>{sale.product_name}</Text>
-          <Text>{sale.category}</Text>
-          <Row
-            left={`${sale.quantity} x ${Number(sale.unit_price).toLocaleString()}`}
-            right={Number(sale.amount).toLocaleString()}
-          />
-
-          <Line />
-
-          {/* Total */}
-          <Text bold align="right">
-            TOTAL: KSh {Number(sale.amount).toLocaleString()}
-          </Text>
-          <Row left="Payment" right={sale.payment_method} />
-          <Row left="Status" right={sale.payment_status.toUpperCase()} />
-
-          <Br />
-          <Text align="center">Thank you for your business!</Text>
-          <Text align="center" bold>Powered by VELROX</Text>
-          <Text align="center">0790809501</Text>
-
-          <Cut />
-        </Printer>
-      );
-
-      // 2. Render to ESC/POS commands
-      const data = await render(receipt);
-
-      // 3. Send to printer via Web Serial
-      const port = await (navigator as any).serial.requestPort();
-      await port.open({ baudRate: 9600 });
-
-      const writer = port.writable?.getWriter();
-      if (writer) {
-        await writer.write(data);
-        writer.releaseLock();
+      if (!printer) {
+        throw new Error("No thermal printer was selected.");
       }
 
-      await port.close();
-    } catch (err: any) {
-      console.error('Print error:', err);
-      alert('Failed to print: ' + err.message);
+      const receiptNumber = `RC-${sale.id.slice(0, 8).toUpperCase()}`;
+
+      const sections = [
+        { type: "Init" },
+
+        {
+          type: "Align",
+          value: "center",
+        },
+
+        {
+          type: "Bold",
+          value: true,
+        },
+
+        {
+          type: "Size",
+          value: {
+            width: 2,
+            height: 2,
+          },
+        },
+
+        {
+          type: "Text",
+          value: business?.business_name || "BUSINESS",
+        },
+
+        {
+          type: "Bold",
+          value: false,
+        },
+
+        {
+          type: "Size",
+          value: {
+            width: 1,
+            height: 1,
+          },
+        },
+
+        {
+          type: "Text",
+          value: business?.location || "",
+        },
+
+        {
+          type: "Text",
+          value: business?.contact_phone
+            ? `Tel: ${business.contact_phone}`
+            : "",
+        },
+
+        {
+          type: "Text",
+          value: "--------------------------------",
+        },
+
+        {
+          type: "Align",
+          value: "left",
+        },
+
+        {
+          type: "Text",
+          value: `Receipt: ${receiptNumber}`,
+        },
+
+        {
+          type: "Text",
+          value: `Date: ${sale.date}`,
+        },
+
+        {
+          type: "Text",
+          value: `Customer: ${sale.customer_name || "Walk-in"}`,
+        },
+
+        {
+          type: "Text",
+          value: "--------------------------------",
+        },
+
+        {
+          type: "Text",
+          value: `${sale.product_name}`,
+        },
+
+        {
+          type: "Text",
+          value: `${sale.quantity} x KSh ${Number(
+            sale.unit_price,
+          ).toLocaleString()} = KSh ${Number(sale.amount).toLocaleString()}`,
+        },
+
+        {
+          type: "Text",
+          value: "--------------------------------",
+        },
+
+        {
+          type: "Bold",
+          value: true,
+        },
+
+        {
+          type: "Text",
+          value: `TOTAL: KSh ${Number(sale.amount).toLocaleString()}`,
+        },
+
+        {
+          type: "Bold",
+          value: false,
+        },
+
+        {
+          type: "Text",
+          value: `Payment: ${sale.payment_method}`,
+        },
+
+        {
+          type: "Text",
+          value: `Status: ${String(sale.payment_status).toUpperCase()}`,
+        },
+
+        {
+          type: "Text",
+          value: "",
+        },
+
+        {
+          type: "Align",
+          value: "center",
+        },
+
+        {
+          type: "Text",
+          value: "Thank you for your business!",
+        },
+
+        {
+          type: "Text",
+          value: "Powered by VELROX",
+        },
+
+        {
+          type: "Text",
+          value: "0790809501",
+        },
+
+        {
+          type: "Feed",
+          value: 3,
+        },
+        {
+          type: "Feed",
+          value: 3,
+        },
+
+        {
+          type: "Cut",
+        },
+      ];
+
+      await print("usb", printer.deviceId, sections as any);
+    } catch (error: any) {
+      console.error("Thermal print error:", error);
+
+      alert(error?.message || "Unable to print the receipt.");
     } finally {
       setPrinting(false);
     }
@@ -97,7 +206,8 @@ export function ThermalPrinterButton({ sale, business }: Props) {
       className="bg-blue-600 hover:bg-blue-700 text-white"
     >
       <PrinterIcon className="w-4 h-4 mr-2" />
-      {printing ? 'Printing...' : 'Print Thermal'}
+
+      {printing ? "Printing..." : "Print Thermal"}
     </Button>
   );
 }
