@@ -77,15 +77,48 @@ export interface Invoice {
 const num = (v: number | string) =>
   typeof v === "number" ? v : parseFloat(v) || 0;
 const fmt = (n: number) =>
-  n.toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  n.toLocaleString("en-KE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
 const STATUS_CONFIG = {
-  draft: { label: "Draft", color: "text-slate-300", bg: "bg-slate-500/20", icon: FileText },
-  sent: { label: "Sent", color: "text-blue-300", bg: "bg-blue-500/20", icon: Send },
-  paid: { label: "Paid", color: "text-emerald-300", bg: "bg-emerald-500/20", icon: CheckCircle },
-  partially_paid: { label: "Partial", color: "text-amber-300", bg: "bg-amber-500/20", icon: DollarSign },
-  overdue: { label: "Overdue", color: "text-red-300", bg: "bg-red-500/20", icon: Clock },
-  cancelled: { label: "Cancelled", color: "text-slate-400", bg: "bg-slate-600/20", icon: XCircle },
+  draft: {
+    label: "Draft",
+    color: "text-slate-300",
+    bg: "bg-slate-500/20",
+    icon: FileText,
+  },
+  sent: {
+    label: "Sent",
+    color: "text-blue-300",
+    bg: "bg-blue-500/20",
+    icon: Send,
+  },
+  paid: {
+    label: "Paid",
+    color: "text-emerald-300",
+    bg: "bg-emerald-500/20",
+    icon: CheckCircle,
+  },
+  partially_paid: {
+    label: "Partial",
+    color: "text-amber-300",
+    bg: "bg-amber-500/20",
+    icon: DollarSign,
+  },
+  overdue: {
+    label: "Overdue",
+    color: "text-red-300",
+    bg: "bg-red-500/20",
+    icon: Clock,
+  },
+  cancelled: {
+    label: "Cancelled",
+    color: "text-slate-400",
+    bg: "bg-slate-600/20",
+    icon: XCircle,
+  },
 } as const;
 
 export default function InvoicesPage() {
@@ -162,7 +195,10 @@ export default function InvoicesPage() {
         .select("*")
         .eq("invoice_id", inv.id)
         .order("position", { ascending: true });
-      setEditingInvoice({ ...(full as Invoice), items: (items as any) || [] } as any);
+      setEditingInvoice({
+        ...(full as Invoice),
+        items: (items as any) || [],
+      } as any);
       setShowForm(true);
     } catch (err) {
       console.error(err);
@@ -251,11 +287,17 @@ export default function InvoicesPage() {
   }, [invoices, filterStatus, searchQuery]);
 
   const totalOutstanding = invoices
-    .filter((i) => ["sent", "partially_paid", "overdue"].includes(effectiveStatus(i)))
+    .filter((i) =>
+      ["sent", "partially_paid", "overdue"].includes(effectiveStatus(i)),
+    )
     .reduce((s, i) => s + num(i.balance_due), 0);
   const totalPaid = invoices.reduce((s, i) => s + num(i.amount_paid), 0);
-  const overdueCount = invoices.filter((i) => effectiveStatus(i) === "overdue").length;
-  const paidCount = invoices.filter((i) => effectiveStatus(i) === "paid").length;
+  const overdueCount = invoices.filter(
+    (i) => effectiveStatus(i) === "overdue",
+  ).length;
+  const paidCount = invoices.filter(
+    (i) => effectiveStatus(i) === "paid",
+  ).length;
 
   const columns = [
     { key: "invoice_number" as const, label: "Invoice #" },
@@ -265,7 +307,7 @@ export default function InvoicesPage() {
       key: "due_date" as const,
       label: "Due",
       render: (v: string | null, row: Invoice) => {
-        if (!v) return "—";
+        if (!v) return "-";
         const days = (row as any).days_to_due ?? null;
         const isPast = days !== null && days < 0;
         return (
@@ -289,7 +331,11 @@ export default function InvoicesPage() {
       render: (v: number | string) => {
         const n = num(v);
         return (
-          <span className={n > 0 ? "text-amber-300 font-medium" : "text-emerald-400"}>
+          <span
+            className={
+              n > 0 ? "text-amber-300 font-medium" : "text-emerald-400"
+            }
+          >
             KSh {fmt(n)}
           </span>
         );
@@ -360,21 +406,21 @@ export default function InvoicesPage() {
   ];
 
   const openPdfDialog = async (inv: Invoice) => {
-  try {
-    const { data: items, error } = await supabase
-      .from("invoice_items")
-      .select("*")
-      .eq("invoice_id", inv.id)
-      .order("position", { ascending: true });
+    try {
+      const { data: items, error } = await supabase
+        .from("invoice_items")
+        .select("*")
+        .eq("invoice_id", inv.id)
+        .order("position", { ascending: true });
 
-    if (error) throw error;
+      if (error) throw error;
 
-    setPdfInvoice({ ...inv, items: items || [] } as any);
-  } catch (err) {
-    console.error("Failed to load invoice items:", err);
-    setError("Failed to load invoice items");
-  }
-};
+      setPdfInvoice({ ...inv, items: items || [] } as any);
+    } catch (err) {
+      console.error("Failed to load invoice items:", err);
+      setError("Failed to load invoice items");
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -421,11 +467,7 @@ export default function InvoicesPage() {
           value={overdueCount}
           subtitle="Past due date"
         />
-        <StatCard
-          title="Paid"
-          value={paidCount}
-          subtitle="Fully settled"
-        />
+        <StatCard title="Paid" value={paidCount} subtitle="Fully settled" />
       </div>
 
       <div className="flex flex-wrap gap-2 items-center">
@@ -504,7 +546,8 @@ export default function InvoicesPage() {
           <DialogHeader>
             <DialogTitle>Delete Invoice</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Delete <strong>{invoiceToDelete?.invoice_number}</strong>? This cannot be undone.
+              Delete <strong>{invoiceToDelete?.invoice_number}</strong>? This
+              cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -528,7 +571,10 @@ export default function InvoicesPage() {
 
       {/* PDF */}
       {pdfInvoice && (
-        <Dialog open={!!pdfInvoice} onOpenChange={(o) => !o && setPdfInvoice(null)}>
+        <Dialog
+          open={!!pdfInvoice}
+          onOpenChange={(o) => !o && setPdfInvoice(null)}
+        >
           <DialogContent className="bg-slate-900 border-slate-700 text-slate-100">
             <DialogHeader>
               <DialogTitle>Invoice {pdfInvoice.invoice_number}</DialogTitle>

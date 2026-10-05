@@ -31,6 +31,8 @@ import {
   XCircle,
   Package,
   User,
+  Calendar,
+  Filter,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,7 +106,9 @@ export default function SalesPage() {
 
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterPeriod, setFilterPeriod] = useState("all");
+  const [filterPeriod, setFilterPeriod] = useState<DateRangeKey>("all");
+  const [customFrom, setCustomFrom] = useState<string>("");
+  const [customTo, setCustomTo] = useState<string>("");
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -132,8 +136,12 @@ export default function SalesPage() {
   });
 
   useEffect(() => {
-    if (business?.id) fetchSales();
-  }, [business, filterPeriod]);
+    if (!business?.id) return;
+    // For custom range, wait until both dates are set
+    if (filterPeriod === "custom" && (!customFrom || !customTo)) return;
+    fetchSales();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [business, filterPeriod, customFrom, customTo]);
 
   const fetchSales = async () => {
     if (!business?.id) return;
@@ -145,21 +153,21 @@ export default function SalesPage() {
         .eq("business_id", business.id)
         .order("created_at", { ascending: false });
 
-      if (filterPeriod !== "all") {
-        const today = new Date();
-        let startDate = new Date();
-        switch (filterPeriod) {
-          case "today":
-            startDate = new Date(today.setHours(0, 0, 0, 0));
-            break;
-          case "week":
-            startDate = new Date(today.setDate(today.getDate() - 7));
-            break;
-          case "month":
-            startDate = new Date(today.setMonth(today.getMonth() - 1));
-            break;
+      // Resolve the effective date range
+      let bounds: { from: string; to: string } | null = null;
+
+      if (filterPeriod === "custom") {
+        if (customFrom && customTo) {
+          bounds = { from: customFrom, to: customTo };
         }
-        query = query.gte("date", startDate.toISOString().split("T")[0]);
+        // If only one side is filled, we skip filtering (or you could
+        // handle one-sided filters - for now we wait for both)
+      } else if (filterPeriod !== "all") {
+        bounds = getDateRangeBounds(filterPeriod);
+      }
+
+      if (bounds) {
+        query = query.gte("date", bounds.from).lte("date", bounds.to);
       }
 
       const { data, error } = await query;
@@ -170,6 +178,158 @@ export default function SalesPage() {
       setError("Failed to load sales data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  /* ------------------------------------------------------------------ */
+  /*  DATE RANGE FILTER                                                  */
+  /* ------------------------------------------------------------------ */
+
+  type DateRangeKey =
+    | "today"
+    | "yesterday"
+    | "this_week"
+    | "last_week"
+    | "this_month"
+    | "last_month"
+    | "this_quarter"
+    | "last_quarter"
+    | "this_year"
+    | "last_year"
+    | "custom"
+    | "all";
+
+  interface DateRange {
+    key: DateRangeKey;
+    label: string;
+  }
+
+  const DATE_RANGE_OPTIONS: DateRange[] = [
+    { key: "all", label: "All Time" },
+    { key: "today", label: "Today" },
+    { key: "yesterday", label: "Yesterday" },
+    { key: "this_week", label: "This Week" },
+    { key: "last_week", label: "Last Week" },
+    { key: "this_month", label: "This Month" },
+    { key: "last_month", label: "Last Month" },
+    { key: "this_quarter", label: "This Quarter" },
+    { key: "last_quarter", label: "Last Quarter" },
+    { key: "this_year", label: "This Year" },
+    { key: "last_year", label: "Last Year" },
+    { key: "custom", label: "Custom Range" },
+  ];
+
+  /** Format a Date as YYYY-MM-DD for the `date` column */
+  const toISODate = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
+  /** Start of the week (Monday-based) */
+  const startOfWeek = (d: Date) => {
+    const day = d.getDay(); // 0=Sun ... 6=Sat
+    const diff = (day + 6) % 7; // Monday-based
+    const res = new Date(d);
+    res.setDate(d.getDate() - diff);
+    res.setHours(0, 0, 0, 0);
+    return res;
+  };
+
+  const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
+  const endOfMonth = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth() + 1, 0);
+
+  const startOfQuarter = (d: Date) => {
+    const q = Math.floor(d.getMonth() / 3);
+    return new Date(d.getFullYear(), q * 3, 1);
+  };
+  const endOfQuarter = (d: Date) => {
+    const q = Math.floor(d.getMonth() / 3);
+    return new Date(d.getFullYear(), q * 3 + 3, 0);
+  };
+
+  /**
+   * Turn a preset key into a concrete { from, to } range.
+   * Returns null for "all" or "custom" (custom is handled separately).
+   */
+  const getDateRangeBounds = (
+    key: DateRangeKey,
+  ): { from: string; to: string } | null => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const y = today.getFullYear();
+    const m = today.getMonth();
+
+    switch (key) {
+      case "today":
+        return { from: toISODate(today), to: toISODate(today) };
+
+      case "yesterday": {
+        const d = new Date(today);
+        d.setDate(d.getDate() - 1);
+        return { from: toISODate(d), to: toISODate(d) };
+      }
+
+      case "this_week": {
+        const from = startOfWeek(today);
+        const to = new Date(from);
+        to.setDate(from.getDate() + 6);
+        return { from: toISODate(from), to: toISODate(to) };
+      }
+
+      case "last_week": {
+        const thisWeekStart = startOfWeek(today);
+        const from = new Date(thisWeekStart);
+        from.setDate(from.getDate() - 7);
+        const to = new Date(thisWeekStart);
+        to.setDate(to.getDate() - 1);
+        return { from: toISODate(from), to: toISODate(to) };
+      }
+
+      case "this_month": {
+        const from = startOfMonth(today);
+        const to = endOfMonth(today);
+        return { from: toISODate(from), to: toISODate(to) };
+      }
+
+      case "last_month": {
+        const from = new Date(y, m - 1, 1);
+        const to = endOfMonth(from);
+        return { from: toISODate(from), to: toISODate(to) };
+      }
+
+      case "this_quarter": {
+        const from = startOfQuarter(today);
+        const to = endOfQuarter(today);
+        return { from: toISODate(from), to: toISODate(to) };
+      }
+
+      case "last_quarter": {
+        const from = new Date(y, m - 3, 1);
+        const lastQStart = startOfQuarter(from);
+        const lastQEnd = endOfQuarter(lastQStart);
+        return { from: toISODate(lastQStart), to: toISODate(lastQEnd) };
+      }
+
+      case "this_year":
+        return {
+          from: toISODate(new Date(y, 0, 1)),
+          to: toISODate(new Date(y, 11, 31)),
+        };
+
+      case "last_year":
+        return {
+          from: toISODate(new Date(y - 1, 0, 1)),
+          to: toISODate(new Date(y - 1, 11, 31)),
+        };
+
+      case "all":
+      case "custom":
+      default:
+        return null;
     }
   };
 
@@ -713,34 +873,86 @@ export default function SalesPage() {
       )}
 
       {/* Period Filter and Add Button */}
-      <div className="flex flex-wrap gap-2 justify-between items-center">
-        <div className="flex flex-wrap gap-2">
-          {["today", "week", "month", "all"].map((period) => (
-            <Button
-              key={period}
-              variant={filterPeriod === period ? "default" : "outline"}
-              onClick={() => setFilterPeriod(period)}
-              className={
-                filterPeriod === period
-                  ? "bg-blue-600 hover:bg-blue-700 text-white"
-                  : "border-slate-600 text-black"
-              }
-            >
-              {period.charAt(0).toUpperCase() + period.slice(1)}
-            </Button>
-          ))}
+      <div className="space-y-4">
+        <div className="flex flex-wrap gap-2 justify-between items-center">
+          <div className="flex flex-wrap gap-2 items-center">
+            {/* Preset selector */}
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-slate-400" />
+              <Select
+                value={filterPeriod}
+                onValueChange={(v) => setFilterPeriod(v as DateRangeKey)}
+              >
+                <SelectTrigger className="w-52 bg-slate-800 border-slate-700 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                  {DATE_RANGE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.key} value={opt.key}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Custom range inputs */}
+            {filterPeriod === "custom" && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <Calendar className="w-4 h-4 text-slate-400" />
+                <Input
+                  type="date"
+                  value={customFrom}
+                  onChange={(e) => setCustomFrom(e.target.value)}
+                  className="w-40 bg-slate-800 border-slate-700 text-white"
+                />
+                <span className="text-slate-400 text-sm">to</span>
+                <Input
+                  type="date"
+                  value={customTo}
+                  onChange={(e) => setCustomTo(e.target.value)}
+                  className="w-40 bg-slate-800 border-slate-700 text-white"
+                />
+                {(customFrom || customTo) && (
+                  <button
+                    onClick={() => {
+                      setCustomFrom("");
+                      setCustomTo("");
+                    }}
+                    className="p-1.5 hover:bg-slate-700 rounded transition-colors"
+                    title="Clear custom range"
+                  >
+                    <X className="w-4 h-4 text-slate-400" />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Active range indicator */}
+            {filterPeriod !== "all" && (
+              <span className="text-xs text-slate-500">
+                {filterPeriod === "custom"
+                  ? customFrom && customTo
+                    ? `${customFrom} → ${customTo}`
+                    : "Pick both dates"
+                  : DATE_RANGE_OPTIONS.find((o) => o.key === filterPeriod)
+                      ?.label}
+              </span>
+            )}
+          </div>
+
+          <Button
+            onClick={() => {
+              resetForm();
+              setEditingSale(null);
+              setShowAddForm(!showAddForm);
+            }}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Sale
+          </Button>
         </div>
-        <Button
-          onClick={() => {
-            resetForm();
-            setEditingSale(null);
-            setShowAddForm(!showAddForm);
-          }}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Sale
-        </Button>
       </div>
 
       {/* ===================== ADD / EDIT FORM ===================== */}

@@ -12,19 +12,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  AlertCircle,
-  Lock,
-  Building2,
-  User,
-  ArrowRight,
-} from "lucide-react";
+import { AlertCircle, Lock, Building2, User, ArrowRight } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { createClient } from "@/lib/supabase/client";
 import { useBusiness } from "@/context/BusinessContext";
 
 // ============================================================
-//  DEMO DETECTION — match these against input to redirect users
+//  DEMO DETECTION - match these against input to redirect users
 // ============================================================
 const DEMO_EMAIL = "velroxdemo@gmail.com";
 const DEMO_PASSWORD = "Demo account";

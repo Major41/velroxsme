@@ -12,9 +12,6 @@ import {
   LogOut,
   Home,
   TrendingUp,
-  RepeatIcon,
-  Zap,
-  Shield,
   Settings,
   ShoppingCart,
   Building2,
@@ -22,8 +19,15 @@ import {
   Wrench,
   FileText,
   Receipt,
+  ChevronDown,
+  ChevronRight,
+  PieChart,
+  LineChart,
+  DollarSign,
+  Target,
+  Briefcase,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useBusiness } from "@/context/BusinessContext";
 
 interface SidebarItem {
@@ -33,11 +37,26 @@ interface SidebarItem {
   badge?: number;
 }
 
+interface AnalyticsItem {
+  label: string;
+  href: string;
+  icon: React.ReactNode;
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { business, logout } = useBusiness();
   const [isOpen, setIsOpen] = useState(false);
+
+  // Auto-expand analytics if we're inside any analytics route
+  const isInAnalytics = pathname.startsWith("/dashboard/analytics");
+  const [analyticsOpen, setAnalyticsOpen] = useState(isInAnalytics);
+
+  // Keep it open when navigating within analytics
+  useEffect(() => {
+    if (isInAnalytics) setAnalyticsOpen(true);
+  }, [isInAnalytics]);
 
   const mainItems: SidebarItem[] = [
     {
@@ -61,9 +80,9 @@ export function Sidebar() {
       icon: <ShoppingCart className="w-4 h-4" />,
     },
     {
-      label: "Quotations", // ⬅️ NEW
-      href: "/dashboard/quotations", // ⬅️ NEW
-      icon: <FileText className="w-4 h-4" />, // ⬅️ NEW
+      label: "Quotations",
+      href: "/dashboard/quotations",
+      icon: <FileText className="w-4 h-4" />,
     },
     {
       label: "Invoices",
@@ -87,17 +106,51 @@ export function Sidebar() {
     },
   ];
 
-  const growthItems: SidebarItem[] = [
+  const analyticsItems: AnalyticsItem[] = [
     {
-      label: "Marketing",
-      href: "/dashboard/marketing",
-      icon: <MessageCircle className="w-4 h-4" />,
+      label: "Overview",
+      href: "/dashboard/analytics",
+      icon: <PieChart className="w-3.5 h-3.5" />,
     },
     {
-      label: "Reminders",
-      href: "/dashboard/reminders",
-      icon: <Bell className="w-4 h-4" />,
-      badge: 4,
+      label: "Sales",
+      href: "/dashboard/analytics/sales",
+      icon: <TrendingUp className="w-3.5 h-3.5" />,
+    },
+    {
+      label: "Expenses",
+      href: "/dashboard/analytics/expenses",
+      icon: <CreditCard className="w-3.5 h-3.5" />,
+    },
+    {
+      label: "Purchases",
+      href: "/dashboard/analytics/purchases",
+      icon: <ShoppingCart className="w-3.5 h-3.5" />,
+    },
+    {
+      label: "Customers",
+      href: "/dashboard/analytics/customers",
+      icon: <Users className="w-3.5 h-3.5" />,
+    },
+    {
+      label: "Invoices",
+      href: "/dashboard/analytics/invoices",
+      icon: <Receipt className="w-3.5 h-3.5" />,
+    },
+    {
+      label: "Quotations",
+      href: "/dashboard/analytics/quotations",
+      icon: <FileText className="w-3.5 h-3.5" />,
+    },
+    {
+      label: "Payroll",
+      href: "/dashboard/analytics/payroll",
+      icon: <Wallet className="w-3.5 h-3.5" />,
+    },
+    {
+      label: "Profitability",
+      href: "/dashboard/analytics/profitability",
+      icon: <DollarSign className="w-3.5 h-3.5" />,
     },
   ];
 
@@ -121,7 +174,7 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile toggle button - hidden on desktop */}
+      {/* Mobile toggle button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="md:hidden fixed top-4 left-4 z-50 p-2 bg-slate-800 border border-slate-700 rounded-lg"
@@ -161,7 +214,6 @@ export function Sidebar() {
             </div>
           </div>
 
-          {/* Subscription Status Badge */}
           {business?.subscription_status && (
             <div
               className={`mt-2 px-2 py-1 rounded-md text-xs font-medium text-center ${
@@ -178,8 +230,8 @@ export function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto p-4 space-y-8">
-          {/* Main */}
+        <nav className="flex-1 overflow-y-auto p-4 space-y-6">
+          {/* Core */}
           <div>
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 px-2">
               Core
@@ -211,37 +263,49 @@ export function Sidebar() {
             </div>
           </div>
 
-          {/* Growth */}
-          {/* <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 px-2">
-              Growth
-            </p>
-            <div className="space-y-1">
-              {growthItems.map((item) => {
-                const isActive = pathname === item.href;
-                return (
-                  <Link key={item.href} href={item.href}>
-                    <button
-                      onClick={() => setIsOpen(false)}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors text-sm font-medium ${
-                        isActive
-                          ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                          : "text-slate-300 hover:bg-slate-800/50 hover:text-slate-100"
-                      }`}
-                    >
-                      <span className="flex-shrink-0">{item.icon}</span>
-                      <span className="flex-1 text-left">{item.label}</span>
-                      {item.badge && (
-                        <span className="bg-emerald-500/30 text-emerald-300 text-xs font-semibold px-2 py-0.5 rounded-full">
-                          {item.badge}
-                        </span>
-                      )}
-                    </button>
-                  </Link>
-                );
-              })}
-            </div>
-          </div> */}
+          {/* Analytics - expandable group */}
+          <div>
+            <button
+              onClick={() => setAnalyticsOpen((v) => !v)}
+              className={`w-full flex items-center justify-between px-2 py-2 rounded-lg transition-colors ${
+                isInAnalytics
+                  ? "text-blue-400"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <span className="text-xs font-semibold uppercase tracking-wider">
+                Analytics
+              </span>
+              {analyticsOpen ? (
+                <ChevronDown className="w-3.5 h-3.5" />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5" />
+              )}
+            </button>
+
+            {analyticsOpen && (
+              <div className="space-y-0.5 mt-1">
+                {analyticsItems.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link key={item.href} href={item.href}>
+                      <button
+                        onClick={() => setIsOpen(false)}
+                        className={`w-full flex items-center gap-3 pl-6 pr-3 py-2 rounded-lg transition-colors text-xs font-medium ${
+                          isActive
+                            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                            : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-100"
+                        }`}
+                      >
+                        <span className="flex-shrink-0">{item.icon}</span>
+                        <span className="flex-1 text-left">{item.label}</span>
+                      </button>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           {/* Settings */}
           <div>
@@ -276,14 +340,14 @@ export function Sidebar() {
           </div>
         </nav>
 
-        {/* Logout button */}
+        {/* Logout */}
         <div className="p-4 border-t border-slate-800">
           <Button
             onClick={handleLogout}
             variant="outline"
             className="w-full border-slate-700 text-black hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 font-medium"
           >
-            <LogOut className="w-4 h-4 mr-2 " />
+            <LogOut className="w-4 h-4 mr-2" />
             Logout
           </Button>
         </div>

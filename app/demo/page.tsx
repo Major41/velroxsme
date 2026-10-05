@@ -25,7 +25,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useBusiness } from "@/context/BusinessContext";
 
 // ============================================================
-//  DEMO CREDENTIALS — update these to match your demo business
+//  DEMO CREDENTIALS - update these to match your demo business
 // ============================================================
 const DEMO_EMAIL = "velroxdemo@gmail.com";
 const DEMO_PASSWORD = "Demo account";

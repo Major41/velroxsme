@@ -497,7 +497,7 @@ export default function QuotationsPage() {
       key: "expiry_date" as const,
       label: "Expires",
       render: (v: string | null, row: Quotation) => {
-        if (!v) return "—";
+        if (!v) return "-";
         const days = daysToExpiry(row);
         const isPast = days !== null && days < 0;
         return (
@@ -598,21 +598,21 @@ export default function QuotationsPage() {
   ];
 
   const openPdfDialog = async (q: Quotation) => {
-  try {
-    const { data: items, error } = await supabase
-      .from("quotation_items")
-      .select("*")
-      .eq("quotation_id", q.id)
-      .order("position", { ascending: true });
+    try {
+      const { data: items, error } = await supabase
+        .from("quotation_items")
+        .select("*")
+        .eq("quotation_id", q.id)
+        .order("position", { ascending: true });
 
-    if (error) throw error;
+      if (error) throw error;
 
-    setPdfQuotation({ ...q, items: items || [] } as any);
-  } catch (err) {
-    console.error("Failed to load quotation items:", err);
-    setError("Failed to load quotation items");
-  }
-};
+      setPdfQuotation({ ...q, items: items || [] } as any);
+    } catch (err) {
+      console.error("Failed to load quotation items:", err);
+      setError("Failed to load quotation items");
+    }
+  };
 
   /* ------------------------------------------------------------------ */
   /*  RENDER                                                             */
