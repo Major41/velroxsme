@@ -309,7 +309,7 @@ export default function BusinessLoginPage() {
             <p className="text-xs text-slate-300 leading-relaxed">
               Every login, every sale, every invoice you record, you&apos;re
               building something real. This Customer Service Week, we&apos;re
-              celebrating{" "}
+              celebrating
               <span className="text-white font-semibold">
                 you and your business
               </span>
@@ -343,12 +343,48 @@ export default function BusinessLoginPage() {
    ============================================================ */
 function CelebrationConfetti() {
   const dots = [
-    { left: "8%", top: "12%", color: "bg-blue-400", size: "w-2 h-2", delay: "0s" },
-    { left: "15%", top: "22%", color: "bg-teal-400", size: "w-1.5 h-1.5", delay: "0.4s" },
-    { left: "22%", top: "8%", color: "bg-amber-400", size: "w-2 h-2", delay: "0.8s" },
-    { right: "10%", top: "15%", color: "bg-teal-400", size: "w-2 h-2", delay: "0.2s" },
-    { right: "18%", top: "28%", color: "bg-blue-400", size: "w-1.5 h-1.5", delay: "0.6s" },
-    { right: "25%", top: "10%", color: "bg-amber-400", size: "w-1.5 h-1.5", delay: "1s" },
+    {
+      left: "8%",
+      top: "12%",
+      color: "bg-blue-400",
+      size: "w-2 h-2",
+      delay: "0s",
+    },
+    {
+      left: "15%",
+      top: "22%",
+      color: "bg-teal-400",
+      size: "w-1.5 h-1.5",
+      delay: "0.4s",
+    },
+    {
+      left: "22%",
+      top: "8%",
+      color: "bg-amber-400",
+      size: "w-2 h-2",
+      delay: "0.8s",
+    },
+    {
+      right: "10%",
+      top: "15%",
+      color: "bg-teal-400",
+      size: "w-2 h-2",
+      delay: "0.2s",
+    },
+    {
+      right: "18%",
+      top: "28%",
+      color: "bg-blue-400",
+      size: "w-1.5 h-1.5",
+      delay: "0.6s",
+    },
+    {
+      right: "25%",
+      top: "10%",
+      color: "bg-amber-400",
+      size: "w-1.5 h-1.5",
+      delay: "1s",
+    },
   ];
 
   return (
