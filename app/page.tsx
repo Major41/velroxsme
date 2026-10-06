@@ -12,7 +12,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { AlertCircle, Lock, Building2, User, ArrowRight } from "lucide-react";
+import {
+  AlertCircle,
+  Lock,
+  Building2,
+  User,
+  ArrowRight,
+  Sparkles,
+  Heart,
+  PartyPopper,
+  Star,
+} from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { createClient } from "@/lib/supabase/client";
 import { useBusiness } from "@/context/BusinessContext";
@@ -34,7 +44,6 @@ export default function BusinessLoginPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // ⬅️ NEW: state for the "this is a demo login" notice
   const [showDemoNotice, setShowDemoNotice] = useState(false);
 
   const [platformSettings, setPlatformSettings] = useState({
@@ -43,14 +52,14 @@ export default function BusinessLoginPage() {
     company_name: "",
   });
 
-  // Redirect if already logged in (context is source of truth)
+  // Redirect if already logged in
   useEffect(() => {
     if (!loading && business) {
       router.replace("/dashboard");
     }
   }, [business, loading, router]);
 
-  // Fetch platform settings for logo and company name
+  // Fetch platform settings
   useEffect(() => {
     const fetchPlatformSettings = async () => {
       try {
@@ -75,7 +84,7 @@ export default function BusinessLoginPage() {
     fetchPlatformSettings();
   }, [supabase]);
 
-  // ⬅️ NEW: reset demo notice as soon as the user changes either field
+  // Reset demo notice when user edits either field
   useEffect(() => {
     setShowDemoNotice(false);
   }, [username, password]);
@@ -84,7 +93,6 @@ export default function BusinessLoginPage() {
     e.preventDefault();
     setError("");
 
-    // ⬅️ NEW: check for demo credentials BEFORE hitting the API
     const isDemoEmail =
       username.trim().toLowerCase() === DEMO_EMAIL.toLowerCase();
     const isDemoPassword = password === DEMO_PASSWORD;
@@ -124,12 +132,43 @@ export default function BusinessLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+    <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4 overflow-hidden">
+      {/* Ambient glows */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
 
-      <Card className="w-full max-w-md z-10 border-slate-700 bg-slate-950">
-        <CardHeader className="space-y-3 text-center">
+      {/* Celebration confetti (subtle, top corners) */}
+      <CelebrationConfetti />
+
+      <Card className="w-full max-w-md z-10 border-slate-700 bg-slate-950 overflow-hidden">
+        {/* ============================================================
+            CUSTOMER SERVICE WEEK BANNER
+            ============================================================ */}
+        <div className="relative bg-gradient-to-r from-blue-600 via-blue-500 to-teal-500 px-6 py-5">
+          <div className="absolute inset-0 opacity-20">
+            <div
+              className="absolute inset-0"
+              style={{
+                backgroundImage: `radial-gradient(circle at 20% 30%, white 1px, transparent 1px), radial-gradient(circle at 70% 60%, white 1px, transparent 1px), radial-gradient(circle at 40% 80%, white 1px, transparent 1px)`,
+                backgroundSize: "60px 60px, 80px 80px, 100px 100px",
+              }}
+            />
+          </div>
+
+          <div className="relative flex items-center justify-center gap-2 text-white">
+            <PartyPopper className="w-5 h-5" />
+            <span className="text-xs font-black uppercase tracking-[0.2em]">
+              Customer Service Week
+            </span>
+            <Heart className="w-4 h-4 fill-current" />
+          </div>
+
+          <p className="relative mt-2 text-center text-white/95 text-sm font-semibold">
+            Thank you for being at the heart of what we do
+          </p>
+        </div>
+
+        <CardHeader className="space-y-3 text-center pt-6">
           {platformSettings.platform_logo ? (
             <div className="flex justify-center mb-2">
               <div className="relative w-20 h-20">
@@ -156,10 +195,19 @@ export default function BusinessLoginPage() {
               Business Dashboard Login
             </CardDescription>
           </div>
+
+          {/* Personal welcome note */}
+          <div className="flex items-center justify-center gap-2 pt-2">
+            {/* <Sparkles className="w-3.5 h-3.5 text-amber-400" /> */}
+            <p className="text-xs text-slate-400 italic">
+              Welcome back, we&apos;ve missed you
+            </p>
+            {/* <Sparkles className="w-3.5 h-3.5 text-amber-400" /> */}
+          </div>
         </CardHeader>
 
         <CardContent>
-          {/* ⬅️ NEW: Demo redirect notice */}
+          {/* Demo redirect notice */}
           {showDemoNotice && (
             <div className="mb-5 p-4 rounded-lg bg-gradient-to-br from-emerald-500/10 to-blue-500/10 border border-emerald-500/40">
               <div className="flex items-start gap-3 mb-3">
@@ -244,7 +292,32 @@ export default function BusinessLoginPage() {
             </Button>
           </form>
 
-          {/* ⬅️ UPDATED: footer with demo link */}
+          {/* ============================================================
+              CUSTOMER SERVICE WEEK APPRECIATION CARD
+              ============================================================ */}
+          <div className="mt-6 p-4 rounded-lg bg-gradient-to-br from-blue-500/10 via-slate-900 to-teal-500/10 border border-blue-500/30">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="flex -space-x-1">
+                <Star className="w-3.5 h-3.5 text-amber-400 fill-current" />
+                <Star className="w-3.5 h-3.5 text-amber-400 fill-current" />
+                <Star className="w-3.5 h-3.5 text-amber-400 fill-current" />
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-400">
+                Thank You
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Every login, every sale, every invoice you record, you&apos;re
+              building something real. This Customer Service Week, we&apos;re
+              celebrating{" "}
+              <span className="text-white font-semibold">
+                you and your business
+              </span>
+              .
+            </p>
+          </div>
+
+          {/* Footer with demo link */}
           <div className="mt-6 pt-6 border-t border-slate-700 space-y-3">
             <p className="text-xs text-center text-slate-500">
               Need help? Contact your system administrator
@@ -261,6 +334,52 @@ export default function BusinessLoginPage() {
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+/* ============================================================
+   Celebration confetti — subtle floating dots in the top corners
+   ============================================================ */
+function CelebrationConfetti() {
+  const dots = [
+    { left: "8%", top: "12%", color: "bg-blue-400", size: "w-2 h-2", delay: "0s" },
+    { left: "15%", top: "22%", color: "bg-teal-400", size: "w-1.5 h-1.5", delay: "0.4s" },
+    { left: "22%", top: "8%", color: "bg-amber-400", size: "w-2 h-2", delay: "0.8s" },
+    { right: "10%", top: "15%", color: "bg-teal-400", size: "w-2 h-2", delay: "0.2s" },
+    { right: "18%", top: "28%", color: "bg-blue-400", size: "w-1.5 h-1.5", delay: "0.6s" },
+    { right: "25%", top: "10%", color: "bg-amber-400", size: "w-1.5 h-1.5", delay: "1s" },
+  ];
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-0">
+      {dots.map((dot, i) => (
+        <span
+          key={i}
+          className={`absolute rounded-full ${dot.color} ${dot.size} opacity-40`}
+          style={{
+            left: dot.left,
+            right: dot.right,
+            top: dot.top,
+            animation: `float 6s ease-in-out infinite`,
+            animationDelay: dot.delay,
+          }}
+        />
+      ))}
+
+      <style jsx>{`
+        @keyframes float {
+          0%,
+          100% {
+            transform: translateY(0) scale(1);
+            opacity: 0.4;
+          }
+          50% {
+            transform: translateY(-15px) scale(1.15);
+            opacity: 0.7;
+          }
+        }
+      `}</style>
     </div>
   );
 }
