@@ -26,6 +26,7 @@ import {
   DollarSign,
   Target,
   Briefcase,
+  Sparkles,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useBusiness } from "@/context/BusinessContext";
@@ -63,6 +64,11 @@ export function Sidebar() {
       label: "Overview",
       href: "/dashboard",
       icon: <Home className="w-4 h-4" />,
+    },
+    {
+      label: "Velrox AI",
+      href: "/dashboard/ai",
+      icon: <Sparkles className="w-4 h-4" />,
     },
     {
       label: "Sales",
@@ -112,6 +118,7 @@ export function Sidebar() {
       href: "/dashboard/analytics",
       icon: <PieChart className="w-3.5 h-3.5" />,
     },
+
     {
       label: "Sales",
       href: "/dashboard/analytics/sales",
@@ -230,7 +237,7 @@ export function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto p-4 space-y-6">
+        <nav className="scrollbar-modern flex-1 overflow-y-auto p-4 space-y-6">
           {/* Core */}
           <div>
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 px-2">

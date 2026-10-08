@@ -311,3 +311,45 @@
     print-color-adjust: exact !important;
   }
 }
+
+@layer utilities {
+  .scrollbar-modern {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(71 85 105 / 0.35) transparent;
+  }
+
+  .scrollbar-modern:hover {
+    scrollbar-color: rgb(71 85 105 / 0.6) transparent;
+  }
+
+  .scrollbar-modern::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .scrollbar-modern::-webkit-scrollbar-track {
+    background: transparent;
+    margin-block: 8px;
+  }
+
+  .scrollbar-modern::-webkit-scrollbar-thumb {
+    background-color: rgb(71 85 105 / 0.3);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    transition: background-color 0.2s ease;
+  }
+
+  .scrollbar-modern:hover::-webkit-scrollbar-thumb {
+    background-color: rgb(71 85 105 / 0.55);
+  }
+
+  .scrollbar-modern::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(71 85 105 / 0.75);
+  }
+
+  .scrollbar-modern::-webkit-scrollbar-button {
+    display: none;
+    height: 0;
+    width: 0;
+  }
+}
