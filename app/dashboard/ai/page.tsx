@@ -32,7 +32,7 @@ const DATE_RANGE_OPTIONS: { key: DateRangeKey; label: string }[] = [
 
 const SUGGESTION_GROUPS = [
   {
-    title: "💰 Money",
+    title: "Money",
     questions: [
       "How much did we sell this period?",
       "How much did we spend?",
@@ -42,7 +42,7 @@ const SUGGESTION_GROUPS = [
     ],
   },
   {
-    title: "📈 Sales",
+    title: "Sales",
     questions: [
       "What are our best-selling products?",
       "Which employee generates the most sales?",
@@ -52,7 +52,7 @@ const SUGGESTION_GROUPS = [
     ],
   },
   {
-    title: "👥 Customers",
+    title: "Customers",
     questions: [
       "How many active customers do we have?",
       "Which customers spend the most?",
@@ -61,7 +61,7 @@ const SUGGESTION_GROUPS = [
     ],
   },
   {
-    title: "🧾 Invoices & Quotes",
+    title: "Invoices & Quotes",
     questions: [
       "How much is outstanding?",
       "How much is overdue?",
@@ -70,7 +70,7 @@ const SUGGESTION_GROUPS = [
     ],
   },
   {
-    title: "🛒 Purchases",
+    title: "Purchases",
     questions: [
       "How much do we spend on each supplier?",
       "Which products cost us the most?",
