@@ -7,8 +7,6 @@ import {
   BarChart3,
   CreditCard,
   Users,
-  MessageCircle,
-  Bell,
   LogOut,
   Home,
   TrendingUp,
@@ -22,11 +20,14 @@ import {
   ChevronDown,
   ChevronRight,
   PieChart,
-  LineChart,
   DollarSign,
-  Target,
-  Briefcase,
   Sparkles,
+  UserCog,
+  ShieldCheck,
+  Package,
+  Layers,
+  Ruler,
+  History,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useBusiness } from "@/context/BusinessContext";
@@ -49,10 +50,22 @@ export function Sidebar() {
   const router = useRouter();
   const { business, logout } = useBusiness();
   const [isOpen, setIsOpen] = useState(false);
+  const isInSystemUsers = pathname.startsWith("/dashboard/system-users");
+  const isInProducts = pathname.startsWith("/dashboard/products");
 
   // Auto-expand analytics if we're inside any analytics route
   const isInAnalytics = pathname.startsWith("/dashboard/analytics");
+  const [productsOpen, setProductsOpen] = useState(isInProducts);
   const [analyticsOpen, setAnalyticsOpen] = useState(isInAnalytics);
+  const [systemUsersOpen, setSystemUsersOpen] = useState(isInSystemUsers);
+
+  useEffect(() => {
+    if (isInProducts) setProductsOpen(true);
+  }, [isInProducts]);
+
+  useEffect(() => {
+    if (isInSystemUsers) setSystemUsersOpen(true);
+  }, [isInSystemUsers]);
 
   // Keep it open when navigating within analytics
   useEffect(() => {
@@ -85,6 +98,7 @@ export function Sidebar() {
       href: "/dashboard/purchases",
       icon: <ShoppingCart className="w-4 h-4" />,
     },
+
     {
       label: "Quotations",
       href: "/dashboard/quotations",
@@ -109,6 +123,24 @@ export function Sidebar() {
       label: "Service Fees",
       href: "/dashboard/service-fee",
       icon: <Wrench className="w-4 h-4" />,
+    },
+  ];
+
+  const productItems: AnalyticsItem[] = [
+    {
+      label: "Items",
+      href: "/dashboard/products/items",
+      icon: <Package className="w-3.5 h-3.5" />,
+    },
+    {
+      label: "Categories",
+      href: "/dashboard/products/categories",
+      icon: <Layers className="w-3.5 h-3.5" />,
+    },
+    {
+      label: "Stock Movements",
+      href: "/dashboard/products/movements",
+      icon: <History className="w-3.5 h-3.5" />,
     },
   ];
 
@@ -158,6 +190,19 @@ export function Sidebar() {
       label: "Profitability",
       href: "/dashboard/analytics/profitability",
       icon: <DollarSign className="w-3.5 h-3.5" />,
+    },
+  ];
+
+  const systemUserItems: AnalyticsItem[] = [
+    {
+      label: "Roles",
+      href: "/dashboard/system-users/roles",
+      icon: <ShieldCheck className="w-3.5 h-3.5" />,
+    },
+    {
+      label: "System Users",
+      href: "/dashboard/system-users/users",
+      icon: <UserCog className="w-3.5 h-3.5" />,
     },
   ];
 
@@ -268,6 +313,94 @@ export function Sidebar() {
                 );
               })}
             </div>
+          </div>
+
+          {/* Products — expandable group */}
+          <div>
+            <button
+              onClick={() => setProductsOpen((v) => !v)}
+              className={`w-full flex items-center justify-between px-2 py-2 rounded-lg transition-colors ${
+                isInProducts
+                  ? "text-blue-400"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <span className="text-xs font-semibold uppercase tracking-wider">
+                Products
+              </span>
+              {productsOpen ? (
+                <ChevronDown className="w-3.5 h-3.5" />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5" />
+              )}
+            </button>
+
+            {productsOpen && (
+              <div className="space-y-0.5 mt-1">
+                {productItems.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link key={item.href} href={item.href}>
+                      <button
+                        onClick={() => setIsOpen(false)}
+                        className={`w-full flex items-center gap-3 pl-6 pr-3 py-2 rounded-lg transition-colors text-xs font-medium ${
+                          isActive
+                            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                            : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-100"
+                        }`}
+                      >
+                        <span className="flex-shrink-0">{item.icon}</span>
+                        <span className="flex-1 text-left">{item.label}</span>
+                      </button>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* System Users — expandable group */}
+          <div>
+            <button
+              onClick={() => setSystemUsersOpen((v) => !v)}
+              className={`w-full flex items-center justify-between px-2 py-2 rounded-lg transition-colors ${
+                isInSystemUsers
+                  ? "text-blue-400"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <span className="text-xs font-semibold uppercase tracking-wider">
+                System Users
+              </span>
+              {systemUsersOpen ? (
+                <ChevronDown className="w-3.5 h-3.5" />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5" />
+              )}
+            </button>
+
+            {systemUsersOpen && (
+              <div className="space-y-0.5 mt-1">
+                {systemUserItems.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link key={item.href} href={item.href}>
+                      <button
+                        onClick={() => setIsOpen(false)}
+                        className={`w-full flex items-center gap-3 pl-6 pr-3 py-2 rounded-lg transition-colors text-xs font-medium ${
+                          isActive
+                            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                            : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-100"
+                        }`}
+                      >
+                        <span className="flex-shrink-0">{item.icon}</span>
+                        <span className="flex-1 text-left">{item.label}</span>
+                      </button>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Analytics - expandable group */}

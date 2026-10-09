@@ -37,6 +37,21 @@ export async function POST(req: Request) {
       );
     }
 
+    // --- Email verification gate ---
+    // Must come BEFORE the password check so unverified users get the
+    // right message regardless of whether they typed the password correctly.
+    if (!business.email_verified) {
+      return NextResponse.json(
+        {
+          error:
+            'Please verify your email address before logging in. Check your inbox for the verification link.',
+          code: 'EMAIL_NOT_VERIFIED',
+          email: business.contact_email,
+        },
+        { status: 403 }
+      );
+    }
+
     // --- Password check ---
     // Use password_hash (bcrypt). Fall back to legacy plaintext columns
     // only if they actually exist and are populated.

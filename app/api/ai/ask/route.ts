@@ -157,6 +157,50 @@ ${JSON.stringify(context, null, 2)}`;
   }
 }
 
+/**
+ * A helper function to call Gemini with automatic retries on 503/429 errors.
+ */
+async function generateWithRetry(
+  model: any,
+  chat: any,
+  question: string,
+  maxRetries = 3,
+): Promise<string> {
+  let attempt = 0;
+
+  while (attempt < maxRetries) {
+    try {
+      // The actual Gemini call
+      const result = await chat.sendMessage(question);
+      return result.response.text();
+    } catch (err: any) {
+      attempt++;
+
+      // Only retry on server-side / capacity errors
+      const status = err?.response?.status || err?.status;
+      const isTransient =
+        status === 503 ||
+        status === 429 ||
+        status === 500 ||
+        status === 502 ||
+        status === 504;
+
+      if (!isTransient || attempt >= maxRetries) {
+        throw err; // Give up or if it's a permanent error
+      }
+
+      // Exponential backoff with jitter: 1s, 2s, 4s + random 0-500ms
+      const delay = Math.pow(2, attempt - 1) * 1000 + Math.random() * 500;
+      console.warn(
+        `Gemini 503/429. Retrying in ${Math.round(delay)}ms (attempt ${attempt}/${maxRetries})...`,
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error("Max retries reached");
+}
+
 /* ==================================================================== */
 /*  SERVER-SIDE ANALYTICS FETCHER                                       */
 /*  Same as the browser version but accepts an injected supabase client  */

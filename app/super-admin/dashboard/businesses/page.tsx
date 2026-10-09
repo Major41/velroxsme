@@ -1,3 +1,4 @@
+// app/super-admin/dashboard/businesses/page.tsx
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -636,6 +637,9 @@ export default function BusinessesPage() {
                     Contact
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">
+                    Email
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">
                     Tier
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase">
@@ -661,6 +665,17 @@ export default function BusinessesPage() {
                       <p className="text-sm text-slate-300">
                         {business.location}
                       </p>
+                    </td>
+                    <td className="px-6 py-4">
+                      {business.email_verified ? (
+                        <span className="text-xs font-medium px-2 py-1 rounded bg-emerald-500/20 text-emerald-300">
+                          Verified
+                        </span>
+                      ) : (
+                        <span className="text-xs font-medium px-2 py-1 rounded bg-amber-500/20 text-amber-300">
+                          Pending
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm">

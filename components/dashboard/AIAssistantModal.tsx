@@ -201,8 +201,8 @@ export function AIAssistantModal() {
                     </div>
                     <p className="text-xs text-slate-300 leading-relaxed">
                       Ask me anything about your business numbers. I read your
-                      live analytics — sales, expenses, purchases, customers,
-                      invoices, quotations, and payroll — and give you instant,
+                      live analytics, sales, expenses, purchases, customers,
+                      invoices, quotations, and payroll and give you instant,
                       accurate answers.
                     </p>
                   </div>

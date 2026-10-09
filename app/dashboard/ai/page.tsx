@@ -260,7 +260,7 @@ export default function VelroxAIPage() {
             </div>
             <p className="text-[10px] text-slate-500 mt-2">
               Velrox AI reads live numbers from your analytics. It never
-              calculates — every figure comes from your data.
+              calculates every figure comes from your data.
             </p>
           </div>
         </ChartCard>
