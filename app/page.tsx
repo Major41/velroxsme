@@ -141,33 +141,6 @@ export default function BusinessLoginPage() {
       <CelebrationConfetti />
 
       <Card className="w-full max-w-md z-10 border-slate-700 bg-slate-950 overflow-hidden">
-        {/* ============================================================
-            CUSTOMER SERVICE WEEK BANNER
-            ============================================================ */}
-        <div className="relative bg-gradient-to-r from-blue-600 via-blue-500 to-teal-500 px-6 py-5">
-          <div className="absolute inset-0 opacity-20">
-            <div
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `radial-gradient(circle at 20% 30%, white 1px, transparent 1px), radial-gradient(circle at 70% 60%, white 1px, transparent 1px), radial-gradient(circle at 40% 80%, white 1px, transparent 1px)`,
-                backgroundSize: "60px 60px, 80px 80px, 100px 100px",
-              }}
-            />
-          </div>
-
-          <div className="relative flex items-center justify-center gap-2 text-white">
-            <PartyPopper className="w-5 h-5" />
-            <span className="text-xs font-black uppercase tracking-[0.2em]">
-              Customer Service Week
-            </span>
-            <Heart className="w-4 h-4 fill-current" />
-          </div>
-
-          <p className="relative mt-2 text-center text-white/95 text-sm font-semibold">
-            Thank you for being at the heart of what we do
-          </p>
-        </div>
-
         <CardHeader className="space-y-3 text-center pt-6">
           {platformSettings.platform_logo ? (
             <div className="flex justify-center mb-2">
@@ -194,15 +167,6 @@ export default function BusinessLoginPage() {
             <CardDescription className="text-slate-400 mt-1">
               Business Dashboard Login
             </CardDescription>
-          </div>
-
-          {/* Personal welcome note */}
-          <div className="flex items-center justify-center gap-2 pt-2">
-            {/* <Sparkles className="w-3.5 h-3.5 text-amber-400" /> */}
-            <p className="text-xs text-slate-400 italic">
-              Welcome back, we&apos;ve missed you
-            </p>
-            {/* <Sparkles className="w-3.5 h-3.5 text-amber-400" /> */}
           </div>
         </CardHeader>
 
@@ -291,31 +255,6 @@ export default function BusinessLoginPage() {
               {isLoading ? "Logging in..." : "Login to Dashboard"}
             </Button>
           </form>
-
-          {/* ============================================================
-              CUSTOMER SERVICE WEEK APPRECIATION CARD
-              ============================================================ */}
-          <div className="mt-6 p-4 rounded-lg bg-gradient-to-br from-blue-500/10 via-slate-900 to-teal-500/10 border border-blue-500/30">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="flex -space-x-1">
-                <Star className="w-3.5 h-3.5 text-amber-400 fill-current" />
-                <Star className="w-3.5 h-3.5 text-amber-400 fill-current" />
-                <Star className="w-3.5 h-3.5 text-amber-400 fill-current" />
-              </div>
-              <span className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-400">
-                Thank You
-              </span>
-            </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Every login, every sale, every invoice you record, you&apos;re
-              building something real. This Customer Service Week, we&apos;re
-              celebrating
-              <span className="text-white font-semibold">
-                you and your business
-              </span>
-              .
-            </p>
-          </div>
 
           {/* Footer with demo link */}
           <div className="mt-6 pt-6 border-t border-slate-700 space-y-3">

@@ -59,6 +59,7 @@ interface Product {
   description: string | null;
   category_id: string | null;
   unit_id: string | null;
+  is_for_sale: boolean;
   cost_price: number;
   selling_price: number;
   track_stock: boolean;
@@ -89,6 +90,7 @@ export default function ProductsItemsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterForSale, setFilterForSale] = useState("all");
 
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -108,6 +110,7 @@ export default function ProductsItemsPage() {
     stock_quantity: "",
     reorder_level: "",
     is_service: false,
+    is_for_sale: true,
     status: "active" as "active" | "inactive",
   });
 
@@ -173,6 +176,7 @@ export default function ProductsItemsPage() {
       track_stock: true,
       stock_quantity: "0",
       reorder_level: "0",
+      is_for_sale: true,
       is_service: false,
       status: "active",
     });
@@ -194,6 +198,7 @@ export default function ProductsItemsPage() {
       stock_quantity: String(p.stock_quantity || 0),
       reorder_level: String(p.reorder_level || 0),
       is_service: p.is_service,
+      is_for_sale: p.is_for_sale,
       status: p.status,
     });
     setShowForm(true);
@@ -224,6 +229,7 @@ export default function ProductsItemsPage() {
         stock_quantity: parseFloat(form.stock_quantity) || 0,
         reorder_level: parseFloat(form.reorder_level) || 0,
         is_service: form.is_service,
+        is_for_sale: form.is_for_sale,
         status: form.status,
         updated_at: new Date().toISOString(),
       };
@@ -281,6 +287,10 @@ export default function ProductsItemsPage() {
       if (filterCategory !== "all" && p.category_id !== filterCategory)
         return false;
       if (filterStatus !== "all" && p.status !== filterStatus) return false;
+      if (filterForSale !== "all") {
+        const want = filterForSale === "yes";
+        if ((p.is_for_sale ?? true) !== want) return false;
+      }
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const hay = [p.name, p.sku, p.barcode]
@@ -416,6 +426,16 @@ export default function ProductsItemsPage() {
             <SelectItem value="inactive">Inactive</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={filterForSale} onValueChange={setFilterForSale}>
+          <SelectTrigger className="w-44 bg-slate-800 border-slate-700 text-white">
+            <SelectValue placeholder="For sale" />
+          </SelectTrigger>
+          <SelectContent className="bg-slate-800 border-slate-700 text-white">
+            <SelectItem value="all">All Products</SelectItem>
+            <SelectItem value="yes">For Sale Only</SelectItem>
+            <SelectItem value="no">Purchase Only</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Table */}
@@ -477,8 +497,13 @@ export default function ProductsItemsPage() {
                     >
                       <td className="px-5 py-3">
                         <div>
-                          <p className="text-sm font-medium text-slate-100">
+                          <p className="text-sm font-medium text-slate-100 flex items-center gap-2">
                             {p.name}
+                            {!p.is_for_sale && (
+                              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">
+                                Purchase only
+                              </span>
+                            )}
                           </p>
                           {p.sku && (
                             <p className="text-xs text-slate-500 font-mono">
@@ -747,6 +772,26 @@ export default function ProductsItemsPage() {
                   </p>
                   <p className="text-[11px] text-slate-500">
                     Services don't track inventory levels
+                  </p>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 p-3 rounded-lg bg-slate-900/50 border border-slate-700/50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.is_for_sale}
+                  onChange={(e) =>
+                    setForm({ ...form, is_for_sale: e.target.checked })
+                  }
+                  className="accent-emerald-500"
+                />
+                <div>
+                  <p className="text-sm text-slate-200">
+                    This product is available for sale
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    Turn off for raw materials, office supplies, or items you
+                    purchase but don't sell (they still track stock and appear
+                    in reports)
                   </p>
                 </div>
               </label>

@@ -29,6 +29,7 @@ import {
   Clock,
   XCircle,
   Package,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,9 +56,73 @@ import { PurchaseReceipt } from "@/components/dashboard/PurchaseReceipt";
 import { PurchaseReceiptPDFButton } from "@/components/dashboard/PurchaseReceiptPDF";
 import { ThermalPurchasePrinterButton } from "@/components/dashboard/ThermalPurchasePrinterButton";
 
+/**
+ * Reconciles stock for a purchase.
+ *
+ * Called after create/update. It compares the stock impact this purchase
+ * *should* have (based on the current form data) with what's already been
+ * recorded in stock_movements (keyed by reference = PUR-<id>).
+ *
+ * If different, it applies the difference via the restock API.
+ *
+ * - Only affects stock when the purchase status is 'delivered'
+ * - Editing a purchase adjusts the delta (no duplicate movements)
+ * - Setting status to 'cancelled' or reverting to 'pending' removes the
+ *   previously-added stock
+ */
+async function reconcilePurchaseStock(params: {
+  purchaseId: string;
+  businessId: string;
+  productId: string | null;
+  quantity: number;
+  unitCost: number;
+  vendorName: string;
+  date: string;
+  status: string;
+}) {
+  const {
+    purchaseId,
+    businessId,
+    productId,
+    quantity,
+    unitCost,
+    vendorName,
+    date,
+    status,
+  } = params;
+
+  // Only tracked-stock products can be reconciled
+  if (!productId) return;
+
+  const reference = `PUR-${purchaseId}`;
+
+  // 1. What has already been recorded for this purchase?
+  const res = await fetch("/api/business/products/purchase-movement", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "reconcile",
+      business_id: businessId,
+      purchase_id: purchaseId,
+      reference,
+      product_id: productId,
+      target_quantity: status === "delivered" ? quantity : 0,
+      unit_cost: unitCost,
+      supplier: vendorName,
+      movement_date: date,
+    }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Failed to update stock");
+  }
+}
+
 interface Purchase {
   id: string;
   date: string;
+  product_id: string | null;
   vendor_name: string;
   category: string;
   description: string;
@@ -93,6 +158,15 @@ const COLORS = [
   "#06b6d4",
   "#f97316",
 ];
+interface ProductOption {
+  id: string;
+  name: string;
+  sku: string | null;
+  cost_price: number;
+  category_id: string | null;
+  product_categories?: { name: string } | null;
+  units_of_measure?: { name: string; abbreviation: string } | null;
+}
 
 const norm = (s: string | null | undefined) => (s || "").trim().toLowerCase();
 
@@ -116,9 +190,12 @@ export default function PurchasesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [products, setProducts] = useState<ProductOption[]>([]);
+  const [productSearch, setProductSearch] = useState("");
 
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split("T")[0],
+    product_id: "",
     vendor_name: "",
     category: "",
     description: "",
@@ -133,7 +210,10 @@ export default function PurchasesPage() {
 
   // Fetch purchases on mount
   useEffect(() => {
-    if (business?.id) fetchPurchases();
+    if (business?.id) {
+      fetchPurchases();
+      fetchProducts();
+    }
   }, [business]);
 
   const fetchPurchases = async () => {
@@ -154,6 +234,19 @@ export default function PurchasesPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchProducts = async () => {
+    if (!business?.id) return;
+    const { data } = await supabase
+      .from("products")
+      .select(
+        "id, name, sku, cost_price, category_id, product_categories(name), units_of_measure(name, abbreviation)",
+      )
+      .eq("business_id", business.id)
+      .eq("status", "active")
+      .order("name");
+    setProducts(data || []);
   };
 
   /* ------------------------------------------------------------------ */
@@ -246,6 +339,27 @@ export default function PurchasesPage() {
     }
   };
 
+  const handleProductSelect = (productId: string) => {
+    const product = products.find((p) => p.id === productId);
+    if (!product) {
+      setFormData((prev) => ({ ...prev, product_id: "", description: "" }));
+      return;
+    }
+
+    setFormData((prev) => {
+      const qty = parseFloat(prev.quantity) || 0;
+      const price = Number(product.cost_price) || 0;
+      return {
+        ...prev,
+        product_id: product.id,
+        description: product.name, // denormalized for legacy compatibility
+        category: product.product_categories?.name || prev.category,
+        unit_price: price ? String(price) : prev.unit_price,
+        total_amount: String(qty * price),
+      };
+    });
+  };
+
   /**
    * Called when vendor input changes. If it matches a known vendor,
    * we don't necessarily want to overwrite the product - but we can
@@ -301,7 +415,7 @@ export default function PurchasesPage() {
     setError("");
 
     try {
-      if (!formData.description || !formData.quantity || !formData.unit_price) {
+      if (!formData.product_id || !formData.quantity || !formData.unit_price) {
         setError("Please fill in Product, Quantity, and Unit Price");
         setSaving(false);
         return;
@@ -309,6 +423,7 @@ export default function PurchasesPage() {
 
       const purchaseData = {
         business_id: business.id,
+        product_id: formData.product_id,
         date: formData.date,
         vendor_name: formData.vendor_name || "Unknown",
         category: formData.category || "Uncategorized",
@@ -322,26 +437,57 @@ export default function PurchasesPage() {
         notes: formData.notes,
       };
 
+      let savedPurchaseId: string;
+
       if (editingPurchase) {
         const { error } = await supabase
           .from("purchases")
           .update(purchaseData)
           .eq("id", editingPurchase.id);
         if (error) throw error;
+        savedPurchaseId = editingPurchase.id;
         setSuccess("Purchase updated successfully!");
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("purchases")
-          .insert([purchaseData]);
+          .insert([purchaseData])
+          .select("id")
+          .single();
         if (error) throw error;
+        savedPurchaseId = data.id;
         setSuccess("Purchase added successfully!");
+      }
+
+      // 👇 NEW: Reconcile stock via the dedicated endpoint
+      try {
+        await fetch("/api/business/products/purchase-movement", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "reconcile",
+            business_id: business.id,
+            purchase_id: savedPurchaseId,
+            product_id: formData.product_id,
+            target_quantity:
+              formData.status === "delivered" ? parseInt(formData.quantity) : 0,
+            unit_cost: parseFloat(formData.unit_price),
+            supplier: formData.vendor_name,
+            movement_date: formData.date,
+          }),
+        });
+      } catch (stockErr) {
+        console.error("Stock reconciliation failed:", stockErr);
+        // Don't fail the whole save — the purchase is saved. Show a soft warning.
+        setSuccess(
+          "Purchase saved, but stock could not be updated. Check the Stock Movements page.",
+        );
       }
 
       await fetchPurchases();
       resetForm();
       setShowAddForm(false);
       setEditingPurchase(null);
-      setTimeout(() => setSuccess(""), 3000);
+      setTimeout(() => setSuccess(""), 4000);
     } catch (err: any) {
       console.error("Error saving purchase:", err);
       setError(err.message);
@@ -354,11 +500,31 @@ export default function PurchasesPage() {
     if (!purchaseToDelete) return;
     setSaving(true);
     try {
+      // 👇 NEW: Reverse any stock this purchase added
+      if (purchaseToDelete.product_id && business?.id) {
+        try {
+          await fetch("/api/business/products/purchase-movement", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "reverse",
+              business_id: business.id,
+              purchase_id: purchaseToDelete.id,
+              product_id: purchaseToDelete.product_id,
+            }),
+          });
+        } catch (stockErr) {
+          console.error("Stock reversal failed:", stockErr);
+          // Continue deleting the purchase — the movement was already logged
+        }
+      }
+
       const { error } = await supabase
         .from("purchases")
         .delete()
         .eq("id", purchaseToDelete.id);
       if (error) throw error;
+
       setPurchases(purchases.filter((p) => p.id !== purchaseToDelete.id));
       setSuccess("Purchase deleted successfully!");
       setDeleteDialogOpen(false);
@@ -376,6 +542,7 @@ export default function PurchasesPage() {
     setEditingPurchase(purchase);
     setFormData({
       date: purchase.date.split("T")[0],
+      product_id: purchase.product_id || "",
       vendor_name: purchase.vendor_name || "",
       category: purchase.category || "",
       description: purchase.description || "",
@@ -395,7 +562,9 @@ export default function PurchasesPage() {
   const resetForm = () => {
     setFormData({
       date: new Date().toISOString().split("T")[0],
+      product_id: "",
       vendor_name: "",
+
       category: "",
       description: "",
       quantity: "1",
@@ -648,25 +817,59 @@ export default function PurchasesPage() {
                 <Package className="w-4 h-4 text-emerald-400" />
                 Product *
               </label>
-              <Input
-                type="text"
-                list="product-suggestions"
-                placeholder="Start typing a product (e.g., Top White, Epson Ink)..."
-                value={formData.description}
-                onChange={(e) => handleDescriptionChange(e.target.value)}
-                className="bg-slate-900 border-slate-700 text-white"
-                autoComplete="off"
-              />
-              {/* Native datalist gives us browser-native autocomplete with zero deps */}
-              <datalist id="product-suggestions">
-                {productSuggestions.map((s) => (
-                  <option key={s.key} value={s.label} />
-                ))}
-              </datalist>
+
+              {/* Search box for filtering the list */}
+              <div className="relative mb-2">
+                <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Input
+                  placeholder="Search products..."
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
+                  className="pl-9 bg-slate-900 border-slate-700 text-white"
+                />
+              </div>
+
+              <Select
+                value={formData.product_id || undefined}
+                onValueChange={handleProductSelect}
+              >
+                <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
+                  <SelectValue placeholder="Select a product..." />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-700 text-white max-h-72">
+                  {products.length === 0 ? (
+                    <div className="px-3 py-4 text-xs text-slate-500 text-center">
+                      No products found. Add products first in{" "}
+                      <span className="text-blue-400">Products → Items</span>.
+                    </div>
+                  ) : (
+                    products
+                      .filter((p) => {
+                        if (!productSearch.trim()) return true;
+                        const q = productSearch.toLowerCase();
+                        return (
+                          p.name.toLowerCase().includes(q) ||
+                          (p.sku || "").toLowerCase().includes(q)
+                        );
+                      })
+                      .map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          <span className="flex items-center justify-between gap-4 w-full">
+                            <span>{p.name}</span>
+                            <span className="text-xs text-slate-400">
+                              {p.sku ? `#${p.sku} · ` : ""}
+                              KSh {Number(p.cost_price).toLocaleString()}
+                            </span>
+                          </span>
+                        </SelectItem>
+                      ))
+                  )}
+                </SelectContent>
+              </Select>
+
               <p className="text-xs text-slate-400 mt-1">
-                {productSuggestions.length > 0
-                  ? `Autofills vendor, category & price from ${productSuggestions.length} known product${productSuggestions.length === 1 ? "" : "s"}.`
-                  : "No purchase history yet - start typing to create a new product."}
+                Only products added in Products → Items can be purchased. This
+                keeps stock and reports accurate.
               </p>
             </div>
 
