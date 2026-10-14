@@ -111,7 +111,7 @@ function VerifyEmailInner() {
                 You can now log in to your dashboard.
               </p>
 
-              <Link href="/business/login">
+              <Link href="/">
                 <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                   Go to login
                 </Button>
@@ -136,7 +136,7 @@ function VerifyEmailInner() {
                     Request a new link
                   </Button>
                 </Link>
-                <Link href="/business/login">
+                <Link href="/">
                   <Button
                     variant="outline"
                     className="w-full border-slate-700 text-slate-300 hover:bg-slate-800"

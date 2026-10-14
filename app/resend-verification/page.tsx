@@ -96,7 +96,7 @@ export default function ResendVerificationPage() {
               </form>
 
               <Link
-                href="/business/login"
+                href="/"
                 className="flex items-center justify-center gap-1 mt-6 text-xs text-slate-400 hover:text-slate-200"
               >
                 <ArrowLeft className="w-3 h-3" />
@@ -115,7 +115,7 @@ export default function ResendVerificationPage() {
                 If an unverified account exists for that email, we've sent a
                 fresh verification link. It expires in 24 hours.
               </p>
-              <Link href="/business/login">
+              <Link href="/">
                 <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                   Back to login
                 </Button>
